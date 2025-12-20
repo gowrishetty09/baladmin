@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Bal-Adminapp",
-    "slug": "Bal-Adminapp",
+    "slug": "bal-admin",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,10 +21,26 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "useNextNotificationsApi": true,
+      "package": "com.bal.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#2563eb"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b118dab0-50a0-4a08-b504-1bc434228660"
+      }
+    },
+    "owner": "pradeep09"
   }
 }
