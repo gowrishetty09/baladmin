@@ -54,7 +54,7 @@ class ApiService {
     try {
       // const response = await this.api.get<ApiResponse<DashboardSummary>>('/dashboard/summary');
       // return response.data.data;
-      
+
       // Mock data for now
       return this.getMockDashboardSummary();
     } catch (error) {
@@ -72,7 +72,7 @@ class ApiService {
     try {
       // const response = await this.api.get<ApiResponse<Booking[]>>('/bookings', { params: filters });
       // return response.data.data;
-      
+
       // Mock data for now
       return this.getMockBookings(filters);
     } catch (error) {
@@ -85,7 +85,7 @@ class ApiService {
     try {
       // const response = await this.api.get<ApiResponse<Booking>>(`/bookings/${bookingId}`);
       // return response.data.data;
-      
+
       // Mock data for now
       const bookings = this.getMockBookings();
       const booking = bookings.find(b => b.id === bookingId || b.bookingId === bookingId);
@@ -104,7 +104,7 @@ class ApiService {
       //   driverId,
       // });
       // return response.data.data;
-      
+
       // Mock response
       console.log(`Assigning driver ${driverId} to booking ${bookingId}`);
       const booking = await this.getBookingById(bookingId);
@@ -124,7 +124,7 @@ class ApiService {
     try {
       // const response = await this.api.get<ApiResponse<Notification[]>>('/notifications');
       // return response.data.data;
-      
+
       // Mock data for now
       return this.getMockNotifications();
     } catch (error) {
@@ -148,7 +148,7 @@ class ApiService {
     try {
       // const response = await this.api.get<ApiResponse<Driver[]>>('/drivers/available');
       // return response.data.data;
-      
+
       // Mock data for now
       return this.getMockDrivers().filter(d => d.status === 'AVAILABLE');
     } catch (error) {
@@ -157,14 +157,38 @@ class ApiService {
     }
   }
 
-  // Push notifications
+  // Push notifications - FCM
   async registerPushToken(token: string): Promise<void> {
     try {
-      // const response = await this.api.post('/admin/register-push-token', { token });
+      // const response = await this.api.post('/admin/register-push-token', {
+      //   token,
+      //   role: 'ADMIN',
+      // });
       // Log for now; replace with real endpoint once backend is ready
-      console.log('Push token registered:', token);
+      console.log('FCM push token registered:', token);
     } catch (error) {
-      console.error('Error registering push token:', error);
+      console.error('Error registering FCM push token:', error);
+      // Don't throw; it's non-critical
+    }
+  }
+
+  /**
+   * Register FCM device token with backend
+   * @param token FCM device token from Firebase Cloud Messaging
+   * @param role User role (ADMIN, DRIVER, CUSTOMER)
+   */
+  async registerFCMToken(token: string, role: string = 'ADMIN'): Promise<void> {
+    try {
+      // const response = await this.api.post('/device/register-fcm-token', {
+      //   token,
+      //   role,
+      //   deviceType: Platform.OS,
+      //   timestamp: new Date().toISOString(),
+      // });
+      // Log for now; replace with real endpoint once backend is ready
+      console.log(`FCM token registered for role ${role}:`, token);
+    } catch (error) {
+      console.error('Error registering FCM token:', error);
       // Don't throw; it's non-critical
     }
   }

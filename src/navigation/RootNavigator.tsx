@@ -9,10 +9,35 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator: React.FC = () => {
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
-      <Stack.Screen name="BookingDetails" component={BookingDetailsScreen} options={{ title: 'Booking Details' }} />
-      <Stack.Screen name="AssignDriver" component={AssignDriverScreen} options={{ title: 'Assign Driver' }} />
+    <Stack.Navigator
+      screenOptions={{
+        // Support deep linking from FCM notifications
+        animationEnabled: true,
+      }}
+    >
+      <Stack.Screen
+        name="MainTabs"
+        component={MainTabs}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="BookingDetails"
+        component={BookingDetailsScreen}
+        options={{
+          title: 'Booking Details',
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen
+        name="AssignDriver"
+        component={AssignDriverScreen}
+        options={{
+          title: 'Assign Driver',
+          presentation: 'modal',
+        }}
+      />
     </Stack.Navigator>
   );
 };

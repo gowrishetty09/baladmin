@@ -7,6 +7,8 @@ interface NotificationsContextValue {
   unreadCount: number;
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
   refresh: () => Promise<void>;
+  addNotification: (notification: Notification) => void;
+  markAsRead: (notificationId: string) => Promise<void>;
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | undefined>(undefined);
@@ -17,15 +19,44 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
   const unreadCount = useMemo(() => notifications.filter(n => !n.isRead).length, [notifications]);
 
   const refresh = async () => {
-    const data = await ApiService.getNotifications();
-    setNotifications(data);
+    try {
+      const data = await ApiService.getNotifications();
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error refreshing notifications:', error);
+    }
+  };
+
+  const addNotification = (notification: Notification) => {
+    // Add new notification at the beginning and ensure no duplicates
+    setNotifications((prev) => {
+      const exists = prev.some(n => n.id === notification.id);
+      if (exists) return prev;
+      return [notification, ...prev];
+    });
+  };
+
+  const markAsRead = async (notificationId: string) => {
+    try {
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
+      );
+      // Call API
+      await ApiService.markNotificationAsRead(notificationId);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
   useEffect(() => {
     refresh().catch(() => {});
   }, []);
 
-  const value = useMemo(() => ({ notifications, unreadCount, setNotifications, refresh }), [notifications, unreadCount]);
+  const value = useMemo(
+    () => ({ notifications, unreadCount, setNotifications, refresh, addNotification, markAsRead }),
+    [notifications, unreadCount]
+  );
 
   return (
     <NotificationsContext.Provider value={value}>
