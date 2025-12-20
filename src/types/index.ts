@@ -22,6 +22,15 @@ export enum VehicleCategory {
   LIMOUSINE = 'LIMOUSINE',
 }
 
+// Admin user type
+export interface Admin {
+  id: string;
+  name: string;
+  email: string;
+  role: string | string[];
+  phone?: string;
+}
+
 export interface Location {
   address: string;
   lat: number;
