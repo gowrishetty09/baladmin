@@ -7,6 +7,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "notification": {
+      "icon": "./assets/notifiy-icon.png",
+      "color": "#2563eb"
+    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -51,7 +55,8 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "b118dab0-50a0-4a08-b504-1bc434228660"
+        "projectId": "b118dab0-50a0-4a08-b504-1bc434228660",
+        "apiBaseUrl": "https://bestaerolimo.online/api"
       }
     },
     "owner": "pradeep09"
