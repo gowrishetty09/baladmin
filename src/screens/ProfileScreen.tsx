@@ -11,9 +11,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useThemeContext } from '../hooks/ThemeContext';
 import { GradientBackground } from '../components/GradientBackground';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types';
+
+type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export const ProfileScreen: React.FC = () => {
   const { isDark, toggleTheme } = useThemeContext();
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
   const adminProfile = {
     name: 'Admin User',
     email: 'admin@limousine.com',
@@ -125,7 +131,7 @@ export const ProfileScreen: React.FC = () => {
             <ProfileItem
               icon="lock-closed-outline"
               label="Change Password"
-              onPress={() => console.log('Change Password')}
+              onPress={() => navigation.navigate('ChangePassword')}
             />
             <ProfileItem
               icon="language-outline"

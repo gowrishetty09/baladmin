@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "notification": {
       "icon": "./assets/notifiy-icon.png",
       "color": "#2563eb"
@@ -27,9 +27,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "useNextNotificationsApi": true,
-      "package": "com.bal.app",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.bal.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -41,17 +39,7 @@
           "color": "#2563eb"
         }
       ],
-      [
-        "@react-native-firebase/app",
-        {
-          "android": {
-            "googleServicesFile": "./google-services.json"
-          },
-          "ios": {
-            "googleServiceInfoPlist": "./GoogleService-Info.plist"
-          }
-        }
-      ]
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

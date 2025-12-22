@@ -1,12 +1,17 @@
-import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
-
 /**
- * Topic Management for FCM subscriptions
- * Useful for sending notifications to groups of users (e.g., all admins)
+ * Notification Topics and Handlers
+ * 
+ * Note: Topic subscriptions are not available in Expo managed workflow.
+ * The backend should handle topic-based routing using device tokens.
+ * 
+ * This file provides notification handler utilities that work with expo-notifications.
  */
 
-// Predefined topics
-export const FCM_TOPICS = {
+/**
+ * Predefined notification topics (for backend reference)
+ * These are handled server-side, not client-side in Expo
+ */
+export const NOTIFICATION_TOPICS = {
     ALL_ADMINS: 'all-admins',
     SOS_ALERTS: 'sos-alerts',
     NEW_BOOKINGS: 'new-bookings',
@@ -14,61 +19,28 @@ export const FCM_TOPICS = {
     SYSTEM_ALERTS: 'system-alerts',
 } as const;
 
+// Legacy export for backward compatibility
+export const FCM_TOPICS = NOTIFICATION_TOPICS;
+
 /**
- * Subscribe admin to notification topics
+ * Topic subscriptions are not available in Expo managed workflow
+ * The backend should manage topic-based routing
  */
 export async function subscribeToAdminTopics(): Promise<void> {
-    try {
-        await Promise.all([
-            subscribeToTopic(FCM_TOPICS.ALL_ADMINS),
-            subscribeToTopic(FCM_TOPICS.SOS_ALERTS),
-            subscribeToTopic(FCM_TOPICS.NEW_BOOKINGS),
-            subscribeToTopic(FCM_TOPICS.SYSTEM_ALERTS),
-        ]);
-        console.log('Subscribed to all admin topics');
-    } catch (error) {
-        console.error('Error subscribing to topics:', error);
-    }
+    console.log('Topic subscriptions are managed server-side in Expo managed workflow');
 }
 
-/**
- * Subscribe to a specific topic
- */
-export async function subscribeToTopic(topic: string): Promise<void> {
-    try {
-        await messaging().subscribeToTopic(topic);
-        console.log(`Subscribed to topic: ${topic}`);
-    } catch (error) {
-        console.error(`Error subscribing to topic ${topic}:`, error);
-        throw error;
-    }
+export async function subscribeToTopic(_topic: string): Promise<void> {
+    console.log('Topic subscriptions are managed server-side in Expo managed workflow');
 }
 
-/**
- * Unsubscribe from a topic
- */
-export async function unsubscribeFromTopic(topic: string): Promise<void> {
-    try {
-        await messaging().unsubscribeFromTopic(topic);
-        console.log(`Unsubscribed from topic: ${topic}`);
-    } catch (error) {
-        console.error(`Error unsubscribing from topic ${topic}:`, error);
-        throw error;
-    }
+export async function unsubscribeFromTopic(_topic: string): Promise<void> {
+    console.log('Topic unsubscriptions are managed server-side in Expo managed workflow');
 }
 
-/**
- * Check if subscribed to a topic
- */
-export async function isSubscribedToTopic(topic: string): Promise<boolean> {
-    try {
-        // Note: React Native Firebase doesn't provide a direct method to check subscription
-        // This would need to be tracked on the backend
-        return true;
-    } catch (error) {
-        console.error(`Error checking topic subscription:`, error);
-        return false;
-    }
+export async function isSubscribedToTopic(_topic: string): Promise<boolean> {
+    // This would need to be tracked on the backend
+    return true;
 }
 
 /**
@@ -76,7 +48,7 @@ export async function isSubscribedToTopic(topic: string): Promise<boolean> {
  */
 export interface NotificationHandler {
     type: string;
-    handler: (notification: FirebaseMessagingTypes.RemoteMessage) => Promise<void>;
+    handler: (notification: any) => Promise<void>;
 }
 
 const handlers: Map<string, NotificationHandler['handler']> = new Map();
@@ -96,7 +68,7 @@ export function registerNotificationHandler(
  * Handle notification based on type
  */
 export async function handleNotificationByType(
-    notification: FirebaseMessagingTypes.RemoteMessage
+    notification: any
 ): Promise<void> {
     const type = notification.data?.type || 'UNKNOWN';
     const handler = handlers.get(type);
@@ -166,7 +138,7 @@ export function setupNotificationHandlers(navigationRef: any): void {
 /**
  * Get notification priority level
  */
-export function getNotificationPriority(notification: FirebaseMessagingTypes.RemoteMessage): 'high' | 'normal' {
+export function getNotificationPriority(notification: any): 'high' | 'normal' {
     const priority = notification.data?.priority || 'MEDIUM';
     return priority === 'HIGH' ? 'high' : 'normal';
 }
@@ -187,7 +159,7 @@ export interface StructuredNotificationData {
 }
 
 export function extractNotificationData(
-    notification: FirebaseMessagingTypes.RemoteMessage
+    notification: any
 ): StructuredNotificationData {
     const data = notification.data || {};
     const priority = (data.priority || 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH';
@@ -209,7 +181,7 @@ export function extractNotificationData(
  * Filter notifications by priority
  */
 export function shouldShowNotification(
-    notification: FirebaseMessagingTypes.RemoteMessage,
+    notification: any,
     minimumPriority: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW'
 ): boolean {
     const priorityMap = { 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3 };
@@ -230,7 +202,7 @@ export interface NotificationGroup {
 }
 
 export function groupNotifications(
-    notifications: FirebaseMessagingTypes.RemoteMessage[]
+    notifications: any[]
 ): NotificationGroup[] {
     const groups = new Map<string, StructuredNotificationData[]>();
 

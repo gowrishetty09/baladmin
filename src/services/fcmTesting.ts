@@ -1,4 +1,3 @@
-import { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import { NotificationType } from '../types';
 
 /**
@@ -6,13 +5,26 @@ import { NotificationType } from '../types';
  * Use these for local testing without backend server
  */
 
+// Define a local type that matches Firebase RemoteMessage structure
+export interface MockRemoteMessage {
+    messageId?: string;
+    sentTime?: number;
+    notification?: {
+        title?: string;
+        body?: string;
+    };
+    data?: { [key: string]: string };
+    from?: string;
+    collapseKey?: string;
+}
+
 /**
  * Mock FCM notification for testing
  */
 export function createMockNotification(
-    overrides?: Partial<FirebaseMessagingTypes.RemoteMessage>
-): FirebaseMessagingTypes.RemoteMessage {
-    const baseNotification: FirebaseMessagingTypes.RemoteMessage = {
+    overrides?: Partial<MockRemoteMessage>
+): MockRemoteMessage {
+    const baseNotification: MockRemoteMessage = {
         messageId: `MSG-${Date.now()}`,
         sentTime: Date.now(),
         notification: {
@@ -48,8 +60,8 @@ export function createMockNotification(
 export function createBookingNotification(
     bookingId: string,
     type: NotificationType,
-    overrides?: Partial<FirebaseMessagingTypes.RemoteMessage>
-): FirebaseMessagingTypes.RemoteMessage {
+    overrides?: Partial<MockRemoteMessage>
+): MockRemoteMessage {
     const notificationTexts: Record<NotificationType, { title: string; body: string }> = {
         [NotificationType.NEW_BOOKING]: {
             title: 'New Booking',
@@ -99,8 +111,8 @@ export function createBookingNotification(
 export function createSOSNotification(
     bookingId: string,
     sosMessage: string,
-    overrides?: Partial<FirebaseMessagingTypes.RemoteMessage>
-): FirebaseMessagingTypes.RemoteMessage {
+    overrides?: Partial<MockRemoteMessage>
+): MockRemoteMessage {
     return createMockNotification({
         notification: {
             title: 'SOS Alert',
@@ -129,8 +141,8 @@ export enum AppState {
  */
 export async function testNotificationScenario(
     scenario: AppState,
-    notification: FirebaseMessagingTypes.RemoteMessage,
-    handler: (notification: FirebaseMessagingTypes.RemoteMessage) => Promise<void>
+    notification: MockRemoteMessage,
+    handler: (notification: MockRemoteMessage) => Promise<void>
 ): Promise<void> {
     console.log(`\n=== Testing ${scenario} scenario ===`);
     console.log('Notification:', JSON.stringify(notification, null, 2));
@@ -154,7 +166,7 @@ export interface NotificationValidation {
 }
 
 export function validateNotification(
-    notification: FirebaseMessagingTypes.RemoteMessage
+    notification: MockRemoteMessage
 ): NotificationValidation {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -200,9 +212,9 @@ export function validateNotification(
  * Generate test report for notification
  */
 export function generateTestReport(
-    notification: FirebaseMessagingTypes.RemoteMessage,
+    notification: MockRemoteMessage,
     validation: NotificationValidation,
-    handler: (notification: FirebaseMessagingTypes.RemoteMessage) => Promise<void>
+    handler: (notification: MockRemoteMessage) => Promise<void>
 ): string {
     let report = `\n${'='.repeat(50)}\n`;
     report += `NOTIFICATION TEST REPORT\n`;
@@ -241,8 +253,8 @@ export function generateTestReport(
  * Batch test multiple notifications
  */
 export async function batchTestNotifications(
-    notifications: FirebaseMessagingTypes.RemoteMessage[],
-    handler: (notification: FirebaseMessagingTypes.RemoteMessage) => Promise<void>
+    notifications: MockRemoteMessage[],
+    handler: (notification: MockRemoteMessage) => Promise<void>
 ): Promise<{
     total: number;
     passed: number;
@@ -282,19 +294,19 @@ export async function batchTestNotifications(
  * Create test suite for FCM
  */
 export class FCMTestSuite {
-    private notifications: FirebaseMessagingTypes.RemoteMessage[] = [];
+    private notifications: MockRemoteMessage[] = [];
     private results: Map<string, { passed: boolean; error?: Error }> = new Map();
 
     addTest(
         name: string,
-        notification: FirebaseMessagingTypes.RemoteMessage
+        notification: MockRemoteMessage
     ): void {
         this.notifications.push(notification);
         console.log(`Added test: ${name}`);
     }
 
     async runTests(
-        handler: (notification: FirebaseMessagingTypes.RemoteMessage) => Promise<void>
+        handler: (notification: MockRemoteMessage) => Promise<void>
     ): Promise<void> {
         console.log(`\nRunning ${this.notifications.length} tests in FCM Test Suite...\n`);
 

@@ -1,105 +1,110 @@
-import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef } from 'react';
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { NotificationsProvider } from './src/hooks/NotificationsContext';
 import { ThemeProvider, useThemeContext } from './src/hooks/ThemeContext';
 import {
-  initializeFCM,
-  requestNotificationPermission,
-  requestUserPermission,
-  getFCMToken,
-  handleForegroundNotification,
-  handleBackgroundNotification,
-  getInitialNotification,
+  configureNotificationHandler,
+  registerForPushNotificationsAsync,
+  addNotificationListeners,
+  getLastNotificationResponse,
   parseNotificationData,
-} from './src/services/fcm';
+} from './src/services/notifications';
 import { useNotificationsContext } from './src/hooks/NotificationsContext';
 import ApiService from './src/services/api';
-import { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
+import * as Notifications from 'expo-notifications';
 
-const navigationRef = useRef<NavigationContainerRef<any>>(null);
+const navigationRef = createNavigationContainerRef<any>();
 
 function AppInner() {
   const { refresh, addNotification } = useNotificationsContext();
   const { navTheme, isDark } = useThemeContext();
+  const notificationListenerCleanup = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    setupFCM();
+    setupNotifications();
+
+    return () => {
+      // Cleanup notification listeners on unmount
+      if (notificationListenerCleanup.current) {
+        notificationListenerCleanup.current();
+      }
+    };
   }, []);
 
-  const setupFCM = async () => {
+  const setupNotifications = async () => {
     try {
-      // Initialize Firebase
-      await initializeFCM();
-
-      // Request permissions
-      await Promise.all([requestNotificationPermission(), requestUserPermission()]);
-
-      // Get FCM token
-      const token = await getFCMToken();
+      // Register for push notifications and get Expo push token
+      const token = await registerForPushNotificationsAsync();
+      
       if (token) {
-        // Register token with backend as ADMIN
-        await ApiService.registerFCMToken(token, 'ADMIN');
+        // Register token with backend
+        await ApiService.registerFCMToken(token);
+        console.log('Push token registered with backend');
       }
 
-      // Handle foreground notifications
-      const unsubscribeForeground = handleForegroundNotification((remoteMessage) => {
-        console.log('Foreground notification:', remoteMessage);
-        handleNotification(remoteMessage);
-      });
+      // Set up notification listeners
+      notificationListenerCleanup.current = addNotificationListeners(
+        // Handle foreground notifications
+        (notification: Notifications.Notification) => {
+          console.log('Foreground notification:', notification);
+          handleNotification(notification);
+        },
+        // Handle notification tap
+        (response: Notifications.NotificationResponse) => {
+          console.log('Notification tapped:', response);
+          handleNotificationResponse(response);
+        }
+      );
 
-      // Handle background notifications
-      await handleBackgroundNotification((remoteMessage) => {
-        console.log('Background notification:', remoteMessage);
-        handleNotification(remoteMessage);
-      });
-
-      // Handle notification that opened the app from killed state
-      const initialNotification = await getInitialNotification();
-      if (initialNotification) {
-        console.log('App opened from killed state by notification:', initialNotification);
-        handleNotification(initialNotification, true);
+      // Check if app was opened from a notification
+      const lastResponse = await getLastNotificationResponse();
+      if (lastResponse) {
+        console.log('App opened from notification:', lastResponse);
+        handleNotificationResponse(lastResponse);
       }
-
-      return unsubscribeForeground;
     } catch (error) {
-      console.error('FCM setup error:', error);
+      console.error('Notification setup error:', error);
     }
   };
 
-  const handleNotification = async (
-    remoteMessage: FirebaseMessagingTypes.RemoteMessage,
-    isInitial = false
-  ) => {
-    const parsedData = parseNotificationData(remoteMessage);
+  const handleNotification = async (notification: Notifications.Notification) => {
+    const parsedData = parseNotificationData(notification);
     console.log('Parsed notification:', parsedData);
 
-    // Refresh notifications list
+    // Refresh notifications list from backend
     await refresh().catch(() => {});
 
-    // Add to context for in-app display
+    // Add to local notification context
     if (addNotification) {
       addNotification({
-        id: parsedData.messageId || Date.now().toString(),
-        type: parsedData.type,
+        id: notification.request.identifier || Date.now().toString(),
+        type: (parsedData.type as any) || 'GENERAL',
         title: parsedData.title,
         message: parsedData.body,
         bookingId: parsedData.bookingId,
         isRead: false,
         createdAt: new Date().toISOString(),
-        priority: parsedData.data.priority || 'MEDIUM',
+        priority: parsedData.priority,
       });
     }
+  };
 
-    // Navigate if it's a booking or SOS notification
-    if (parsedData.bookingId && navigationRef.current) {
-      navigationRef.current.navigate('BookingDetails', {
+  const handleNotificationResponse = async (response: Notifications.NotificationResponse) => {
+    const parsedData = parseNotificationData(response);
+    console.log('Handling notification tap:', parsedData);
+
+    // Refresh notifications list
+    await refresh().catch(() => {});
+
+    // Navigate based on notification type
+    if (parsedData.bookingId && navigationRef.isReady()) {
+      navigationRef.navigate('BookingDetails', {
         bookingId: parsedData.bookingId,
       });
-    } else if (parsedData.sosId && navigationRef.current) {
-      navigationRef.current.navigate('Bookings', {
+    } else if (parsedData.sosId && navigationRef.isReady()) {
+      navigationRef.navigate('Bookings', {
         filterSOS: true,
       });
     }
