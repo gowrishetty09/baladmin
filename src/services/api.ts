@@ -32,7 +32,18 @@ export const setAuthToken = (token?: string | null) => {
   if (authToken) {
     http.defaults.headers.common.Authorization = `Bearer ${authToken}`;
   } else {
-    delete http.defaults.headers.common.Authorization;
+    // In some runtimes (notably bridgeless/new-arch), deleting a property can throw
+    // if it was defined as non-configurable. Prefer best-effort removal.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete (http.defaults.headers.common as any).Authorization;
+    } catch {
+      try {
+        (http.defaults.headers.common as any).Authorization = undefined;
+      } catch {
+        // ignore
+      }
+    }
   }
 };
 
@@ -283,5 +294,4 @@ class ApiService {
 
 const apiService = new ApiService();
 
-export { setAuthToken, setRefreshToken, getRefreshToken, setRefreshHandler, setAuthFailedHandler };
 export default apiService;
