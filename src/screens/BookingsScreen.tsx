@@ -6,6 +6,7 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
+  TextInput,
 } from 'react-native';
 import { GradientBackground } from '../components/GradientBackground';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -36,6 +37,9 @@ export const BookingsScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Search
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Filter states
   const [selectedHotel, setSelectedHotel] = useState<string>('');
   const [selectedDriver, setSelectedDriver] = useState<string>('');
@@ -58,7 +62,7 @@ export const BookingsScreen: React.FC = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [bookings, selectedHotel, selectedDriver, selectedStatus]);
+  }, [bookings, selectedHotel, selectedDriver, selectedStatus, searchQuery]);
 
   const loadBookings = async () => {
     try {
@@ -94,6 +98,27 @@ export const BookingsScreen: React.FC = () => {
       filtered = filtered.filter((b) => b.status === selectedStatus);
     }
 
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+      filtered = filtered.filter((b) => {
+        const haystack = [
+          b.bookingId,
+          b.id,
+          b.customerName,
+          b.customerPhone,
+          b.driver?.name,
+          b.driver?.vehicleNumber,
+          b.pickup?.address,
+          b.drop?.address,
+          b.hotelName,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(query);
+      });
+    }
+
     setFilteredBookings(filtered);
   };
 
@@ -101,6 +126,7 @@ export const BookingsScreen: React.FC = () => {
     setSelectedHotel('');
     setSelectedDriver('');
     setSelectedStatus('');
+    setSearchQuery('');
   };
 
   const handleAssignDriver = (booking: Booking) => {
@@ -193,10 +219,25 @@ export const BookingsScreen: React.FC = () => {
         </View>
       )}
 
-      <View style={styles.resultHeader}>
-        <Text style={styles.resultText}>
-          {filteredBookings.length} {filteredBookings.length === 1 ? 'Booking' : 'Bookings'}
-        </Text>
+      <View style={styles.searchHeader}>
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={18} color={Colors.navy + '80'} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search bookings"
+            placeholderTextColor={Colors.navy + '66'}
+            style={styles.searchInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={18} color={Colors.navy + '80'} />
+            </TouchableOpacity>
+          )}
+        </View>
         {hasActiveFilters && (
           <View style={styles.filterBadge}>
             <Text style={styles.filterBadgeText}>Filtered</Text>
@@ -277,10 +318,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  resultHeader: {
+  searchHeader: {
     backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -288,10 +329,24 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 12,
   },
-  resultText: {
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
     fontSize: 14,
     color: Colors.navy,
-    fontWeight: '500',
+    marginLeft: 8,
+    paddingVertical: 0,
   },
   filterBadge: {
     backgroundColor: Colors.primary + '20',

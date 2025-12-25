@@ -9,12 +9,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { COLORS } from '../../constants/colors';
+import { COLORS } from '../constants/colors';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { useAuthContext } from '../../hooks/useAuthStore';
-import { getErrorMessage } from '../../utils';
-import type { RootStackParamList } from '../../navigation/RootNavigator';
+import { useAuthContext } from '../hooks/useAuthStore';
+import { getErrorMessage } from '../utils';
+import type { RootStackParamList } from '../types';
 
 const PLACEHOLDER_COLOR = 'rgba(0, 0, 0, 0.75)';
 

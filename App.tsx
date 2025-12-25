@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { NotificationsProvider } from './src/hooks/NotificationsContext';
@@ -14,13 +14,17 @@ import {
 import { useNotificationsContext } from './src/hooks/NotificationsContext';
 import ApiService from './src/services/api';
 import * as Notifications from 'expo-notifications';
+import { AuthProvider } from './src/hooks/useAuthStore';
+import { useAuthContext } from './src/hooks/useAuthStore';
 
 const navigationRef = createNavigationContainerRef<any>();
 
 function AppInner() {
   const { refresh, addNotification } = useNotificationsContext();
   const { navTheme, isDark } = useThemeContext();
+  const { isAuthenticated, isInitializing } = useAuthContext();
   const notificationListenerCleanup = useRef<(() => void) | null>(null);
+  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
 
   useEffect(() => {
     setupNotifications();
@@ -33,15 +37,22 @@ function AppInner() {
     };
   }, []);
 
+  useEffect(() => {
+    if (isInitializing) return;
+    if (!isAuthenticated) return;
+    if (!expoPushToken) return;
+
+    // Register token with backend only when authenticated.
+    ApiService.registerFCMToken(expoPushToken).catch(() => {});
+  }, [expoPushToken, isAuthenticated, isInitializing]);
+
   const setupNotifications = async () => {
     try {
       // Register for push notifications and get Expo push token
       const token = await registerForPushNotificationsAsync();
-      
+
       if (token) {
-        // Register token with backend
-        await ApiService.registerFCMToken(token);
-        console.log('Push token registered with backend');
+        setExpoPushToken(token);
       }
 
       // Set up notification listeners
@@ -121,9 +132,11 @@ function AppInner() {
 export default function App() {
   return (
     <ThemeProvider>
-      <NotificationsProvider>
-        <AppInner />
-      </NotificationsProvider>
+      <AuthProvider>
+        <NotificationsProvider>
+          <AppInner />
+        </NotificationsProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

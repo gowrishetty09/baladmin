@@ -82,7 +82,7 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.revenueCard}>
           <Text style={styles.revenueLabel}>Today's Revenue</Text>
           <Text style={styles.revenueValue}>
-            ${summary?.totalRevenue.toFixed(2) || '0.00'}
+            RM {(summary?.totalRevenue ?? 0).toFixed(2)}
           </Text>
         </View>
 

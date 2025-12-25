@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { MonitoringScreen } from '../screens/MonitoringScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { BookingsScreen } from '../screens/BookingsScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
@@ -18,6 +19,7 @@ export const MainTabs: React.FC = () => {
 
   return (
     <Tab.Navigator
+      initialRouteName="Monitoring"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: isDark ? Colors.navy : Colors.gold,
@@ -36,6 +38,7 @@ export const MainTabs: React.FC = () => {
         },
         tabBarIcon: ({ color, size }) => {
           const name =
+            route.name === 'Monitoring' ? 'map' :
             route.name === 'Home' ? 'home' :
             route.name === 'Bookings' ? 'car' :
             route.name === 'Notifications' ? 'notifications' :
@@ -44,6 +47,7 @@ export const MainTabs: React.FC = () => {
         },
       })}
     >
+      <Tab.Screen name="Monitoring" component={MonitoringScreen} />
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Bookings" component={BookingsScreen} />
       <Tab.Screen

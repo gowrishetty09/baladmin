@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import ApiService from '../services/api';
 import { Notification } from '../types';
+import { useAuthContext } from './useAuthStore';
 
 interface NotificationsContextValue {
   notifications: Notification[];
@@ -15,10 +16,14 @@ const NotificationsContext = createContext<NotificationsContextValue | undefined
 
 export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { isAuthenticated, isInitializing } = useAuthContext();
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.isRead).length, [notifications]);
 
   const refresh = async () => {
+    if (!isAuthenticated) {
+      return;
+    }
     try {
       const data = await ApiService.getNotifications();
       setNotifications(data);
@@ -50,8 +55,13 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
-    refresh().catch(() => {});
-  }, []);
+    if (isInitializing) return;
+    if (isAuthenticated) {
+      refresh().catch(() => {});
+    } else {
+      setNotifications([]);
+    }
+  }, [isAuthenticated, isInitializing]);
 
   const value = useMemo(
     () => ({ notifications, unreadCount, setNotifications, refresh, addNotification, markAsRead }),

@@ -70,28 +70,28 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   const timeAgo = formatTimeAgo(notification.createdAt);
 
   // Check if this is a high-priority notification type (SOS or New Booking)
-  const isHighPriority = notification.type === NotificationType.SOS_RAISED || 
-                          notification.type === NotificationType.NEW_BOOKING;
+  const isHighPriority =
+    notification.type === NotificationType.SOS_RAISED ||
+    notification.type === NotificationType.NEW_BOOKING;
   const isSOS = notification.type === NotificationType.SOS_RAISED;
+  const accentColor = isSOS ? Colors.sos : color;
 
   return (
     <TouchableOpacity
       style={[
         styles.container,
         !notification.isRead && styles.unreadContainer,
-        isHighPriority && {
-          backgroundColor: isSOS ? Colors.sos : Colors.info,
-          borderWidth: 0,
-        },
+        isHighPriority && styles.highPriorityContainer,
+        isHighPriority && { borderLeftColor: accentColor },
       ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
       <View style={[
         styles.iconContainer, 
-        { backgroundColor: isHighPriority ? 'rgba(255,255,255,0.3)' : color + '20' }
+        { backgroundColor: accentColor + '20' }
       ]}>
-        <Ionicons name={icon} size={24} color={isHighPriority ? Colors.white : color} />
+        <Ionicons name={icon} size={24} color={accentColor} />
       </View>
 
       <View style={styles.content}>
@@ -100,18 +100,17 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
             style={[
               styles.title,
               !notification.isRead && styles.unreadTitle,
-              isHighPriority && { color: Colors.white },
+              isHighPriority && { color: Colors.navy },
             ]}
           >
             {notification.title}
           </Text>
-          {!notification.isRead && !isHighPriority && <View style={styles.unreadDot} />}
+          {!notification.isRead && <View style={styles.unreadDot} />}
         </View>
 
         <Text 
           style={[
             styles.message,
-            isHighPriority && { color: 'rgba(255,255,255,0.9)' },
           ]} 
           numberOfLines={2}
         >
@@ -119,10 +118,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         </Text>
 
         <View style={styles.footer}>
-          <Text style={[
-            styles.time,
-            isHighPriority && { color: 'rgba(255,255,255,0.8)' },
-          ]}>{timeAgo}</Text>
+          <Text style={styles.time}>{timeAgo}</Text>
           {notification.priority !== 'LOW' && !isHighPriority && (
             <View
               style={[
@@ -138,8 +134,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
             </View>
           )}
           {isHighPriority && (
-            <View style={[styles.priorityBadge, { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
-              <Text style={[styles.priorityText, { color: Colors.white }]}>
+            <View style={[styles.priorityBadge, { backgroundColor: accentColor + '20' }]}>
+              <Text style={[styles.priorityText, { color: accentColor }]}>
                 {isSOS ? 'URGENT' : 'NEW'}
               </Text>
             </View>
@@ -177,11 +173,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     flexDirection: 'row',
     marginHorizontal: 16,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
   },
   unreadContainer: {
     backgroundColor: Colors.gold + '10',
     borderWidth: 1,
     borderColor: Colors.gold + '30',
+  },
+  highPriorityContainer: {
+    borderLeftWidth: 4,
   },
   iconContainer: {
     width: 48,

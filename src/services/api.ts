@@ -13,12 +13,119 @@ import {
 } from '../types';
 
 // Get base URL from environment or use default
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://bestaerolimo.online/api';
 
 const http = axios.create({
   baseURL: BASE_URL,
   timeout: 20000,
 });
+
+const shouldLogHttp =
+  (__DEV__ && (process.env.EXPO_PUBLIC_DEBUG_HTTP === '1' || process.env.EXPO_PUBLIC_DEBUG_HTTP === 'true'));
+
+const getRequestLabel = (config: any) => {
+  const method = String(config?.method ?? 'GET').toUpperCase();
+  const url = String(config?.baseURL ? `${config.baseURL}${config.url ?? ''}` : config?.url ?? '');
+  return `${method} ${url}`.trim();
+};
+
+const normalizeBookingStatus = (rawStatus: any): BookingStatus => {
+  switch (String(rawStatus ?? '').toUpperCase()) {
+    case 'ASSIGNED':
+      return BookingStatus.DRIVER_ASSIGNED;
+    case 'EN_ROUTE':
+    case 'ARRIVED':
+    case 'PICKED_UP':
+      return BookingStatus.IN_PROGRESS;
+    case 'COMPLETED':
+      return BookingStatus.COMPLETED;
+    case 'CANCELLED':
+    case 'QUOTE_REJECTED':
+      return BookingStatus.CANCELLED;
+    case 'REQUESTED':
+    case 'PRICED':
+    case 'QUOTED':
+    case 'QUOTE_ACCEPTED':
+    case 'ACCEPTED':
+    default:
+      return BookingStatus.PENDING;
+  }
+};
+
+const normalizeBookingSource = (rawSource: any): BookingSource => {
+  switch (String(rawSource ?? '').toUpperCase()) {
+    case 'HOTEL_PORTAL':
+    case 'HOTEL':
+      return BookingSource.HOTEL;
+    case 'KIOSK':
+      return BookingSource.KIOSK;
+    case 'CUSTOMER_APP':
+    case 'CUSTOMER':
+      return BookingSource.CUSTOMER;
+    case 'WALK_IN':
+      return BookingSource.WALK_IN;
+    default:
+      return BookingSource.CUSTOMER;
+  }
+};
+
+const normalizeBooking = (raw: any): Booking => {
+  const id = String(raw?.id ?? '');
+  const bookingId = String(raw?.bookingId ?? (id ? id.slice(-8).toUpperCase() : ''));
+  const pickupAddress = String(raw?.pickup?.address ?? raw?.pickupLocation ?? '');
+  const dropAddress = String(raw?.drop?.address ?? raw?.dropLocation ?? '');
+
+  const customerName =
+    String(raw?.guestName ?? raw?.customerName ?? raw?.customer?.name ?? '');
+  const customerPhone =
+    String(raw?.guestPhone ?? raw?.customerPhone ?? raw?.customer?.phone ?? '');
+
+  const fareCandidate =
+    raw?.finalAmount ?? raw?.finalPrice ?? raw?.paymentAmount ?? raw?.quotedPrice ?? raw?.fare;
+  const fare = fareCandidate !== undefined && fareCandidate !== null ? Number(fareCandidate) : undefined;
+
+  return {
+    id,
+    bookingId,
+    pickup: {
+      address: pickupAddress,
+      lat: Number(raw?.pickup?.lat ?? raw?.pickup?.latitude ?? 0),
+      lng: Number(raw?.pickup?.lng ?? raw?.pickup?.longitude ?? 0),
+    },
+    drop: {
+      address: dropAddress,
+      lat: Number(raw?.drop?.lat ?? raw?.drop?.latitude ?? 0),
+      lng: Number(raw?.drop?.lng ?? raw?.drop?.longitude ?? 0),
+    },
+    source: normalizeBookingSource(raw?.source),
+    vehicleCategory:
+      (raw?.vehicleCategory as VehicleCategory) ??
+      (raw?.vehicle?.category?.name as VehicleCategory) ??
+      VehicleCategory.SEDAN,
+    status: normalizeBookingStatus(raw?.status),
+    driver: raw?.driver
+      ? {
+        id: String(raw.driver.id ?? ''),
+        name: String(raw.driver.name ?? ''),
+        phone: String(raw.driver.phone ?? ''),
+        vehicleNumber: String(raw.driver.vehicleNumber ?? ''),
+        vehicleCategory:
+          (raw.driver.vehicleCategory as VehicleCategory) ?? VehicleCategory.SEDAN,
+        rating: Number(raw.driver.rating ?? 0),
+        status: (raw.driver.status as any) ?? 'AVAILABLE',
+      }
+      : undefined,
+    customerName,
+    customerPhone,
+    scheduledTime: String(raw?.scheduledTime ?? raw?.pickupTime ?? raw?.createdAt ?? ''),
+    createdAt: String(raw?.createdAt ?? ''),
+    hasSOS: Boolean(raw?.hasSOS ?? (Array.isArray(raw?.sosAlerts) && raw.sosAlerts.length > 0)),
+    sosMessage: raw?.sosMessage,
+    hotelName: raw?.hotelName ?? raw?.hotel?.name ?? undefined,
+    kioskLocation: raw?.kioskLocation ?? undefined,
+    fare: Number.isFinite(fare) ? fare : undefined,
+  };
+};
 
 let authToken: string | null = null;
 let refreshTokenValue: string | null = null;
@@ -71,6 +178,10 @@ const onRefreshComplete = (newToken: string) => {
 };
 
 http.interceptors.request.use((config) => {
+  if (shouldLogHttp) {
+    (config as any).metadata = { startTime: Date.now() };
+    console.log(`[HTTP] → ${getRequestLabel(config)}`);
+  }
   if (authToken) {
     config.headers = config.headers ?? {};
     if (!config.headers.Authorization) {
@@ -81,12 +192,31 @@ http.interceptors.request.use((config) => {
 });
 
 http.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (shouldLogHttp) {
+      const meta = (response.config as any)?.metadata;
+      const ms = meta?.startTime ? Date.now() - meta.startTime : undefined;
+      const suffix = ms !== undefined ? ` (${ms}ms)` : '';
+      console.log(`[HTTP] ← ${response.status} ${getRequestLabel(response.config)}${suffix}`);
+    }
+    return response;
+  },
   async (error: AxiosError) => {
+    if (shouldLogHttp) {
+      const cfg: any = error.config;
+      const meta = cfg?.metadata;
+      const ms = meta?.startTime ? Date.now() - meta.startTime : undefined;
+      const suffix = ms !== undefined ? ` (${ms}ms)` : '';
+      const status = error.response?.status;
+      console.log(`[HTTP] ← ${status ?? 'ERR'} ${getRequestLabel(cfg)}${suffix}`);
+    }
     const originalRequest = error.config;
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/');
 
     if (error.response?.status === 401 && !isAuthEndpoint && originalRequest) {
+      const hadAuthHeader = Boolean((originalRequest as any)?.headers?.Authorization);
+      const hadAnyAuth = Boolean(authToken || refreshTokenValue || hadAuthHeader);
+
       if (isRefreshing) {
         return new Promise((resolve) => {
           subscribeToRefresh((newToken: string) => {
@@ -116,7 +246,8 @@ http.interceptors.response.use(
           isRefreshing = false;
         }
       } else {
-        if (onAuthFailed) {
+        // Only treat as an auth failure if we were actually authenticated.
+        if (hadAnyAuth && onAuthFailed) {
           onAuthFailed();
         }
       }
@@ -149,24 +280,39 @@ class ApiService {
   async getDashboardSummary(from?: string, to?: string): Promise<DashboardSummary> {
     try {
       const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
 
-      const fromDate = from || startOfDay;
-      const toDate = to || endOfDay;
+      const fromDate = from || startOfMonth;
+      const toDate = to || endOfToday;
 
       const response = await this.api.get('/dashboard/bookings-summary', {
         params: { from: fromDate, to: toDate },
       });
 
-      const bookings = response.data || [];
+      // Backend returns an aggregated array like:
+      // [{ date, total, requested, accepted, assigned, completed }]
+      const rows = Array.isArray(response.data) ? response.data : [];
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const latestRow = rows.length ? rows[rows.length - 1] : null;
+      const todayRow = rows.find((row: any) => row?.date === todayKey) ?? latestRow;
+
+      const total = Number(todayRow?.total ?? 0);
+      const requested = Number(todayRow?.requested ?? 0);
+      const accepted = Number(todayRow?.accepted ?? 0);
+      const assigned = Number(todayRow?.assigned ?? 0);
+      const completed = Number(todayRow?.completed ?? 0);
+
       return {
-        newBookingsToday: bookings.filter((b: any) => b.status === 'PENDING').length,
-        ongoingRides: bookings.filter((b: any) => b.status === 'IN_PROGRESS').length,
-        pendingUnassigned: bookings.filter((b: any) => b.status === 'PENDING' && !b.driver).length,
-        completedRides: bookings.filter((b: any) => b.status === 'COMPLETED').length,
-        sosTickets: bookings.filter((b: any) => b.hasSOS).length,
-        totalRevenue: bookings.reduce((sum: number, b: any) => sum + (b.fare || 0), 0),
+        // Use total as the "today" count (falls back to latest available day).
+        newBookingsToday: total,
+        // Approximate ongoing rides from assigned+accepted (backend does not expose IN_PROGRESS here).
+        ongoingRides: accepted + assigned,
+        pendingUnassigned: requested,
+        completedRides: completed,
+        // Not provided by this endpoint.
+        sosTickets: 0,
+        totalRevenue: 0,
       };
     } catch (error) {
       console.error('Error fetching dashboard summary:', error);
@@ -188,12 +334,27 @@ class ApiService {
         offset: filters?.offset || 0,
       };
 
-      if (filters?.status) params.status = filters.status;
+      // Backend expects BookingStatus values like REQUESTED/ASSIGNED/EN_ROUTE/etc.
+      if (filters?.status) {
+        params.status =
+          filters.status === BookingStatus.PENDING
+            ? 'REQUESTED'
+            : filters.status === BookingStatus.DRIVER_ASSIGNED
+              ? 'ASSIGNED'
+              : filters.status === BookingStatus.IN_PROGRESS
+                ? 'EN_ROUTE'
+                : filters.status === BookingStatus.COMPLETED
+                  ? 'COMPLETED'
+                  : filters.status === BookingStatus.CANCELLED
+                    ? 'CANCELLED'
+                    : undefined;
+      }
       if (filters?.driver) params.driverId = filters.driver;
       if (filters?.hotel) params.hotelId = filters.hotel;
 
       const response = await this.api.get('/bookings', { params });
-      return response.data || [];
+      const items = Array.isArray(response.data) ? response.data : [];
+      return items.map(normalizeBooking);
     } catch (error) {
       console.error('Error fetching bookings:', error);
       throw error;
@@ -203,7 +364,7 @@ class ApiService {
   async getBookingById(bookingId: string): Promise<Booking> {
     try {
       const response = await this.api.get(`/bookings/${bookingId}`);
-      return response.data;
+      return normalizeBooking(response.data);
     } catch (error) {
       console.error('Error fetching booking:', error);
       throw error;

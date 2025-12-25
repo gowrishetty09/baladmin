@@ -11,25 +11,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useThemeContext } from '../hooks/ThemeContext';
 import { GradientBackground } from '../components/GradientBackground';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
-
-type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+import { useAuthContext } from '../hooks/useAuthStore';
 
 export const ProfileScreen: React.FC = () => {
   const { isDark, toggleTheme } = useThemeContext();
-  const navigation = useNavigation<ProfileScreenNavigationProp>();
+  const { user, logout } = useAuthContext();
+
   const adminProfile = {
-    name: 'Admin User',
-    email: 'admin@limousine.com',
-    role: 'Super Admin',
-    phone: '+1-555-0000',
+    name: user?.name ?? 'Admin',
+    email: user?.email ?? '',
+    role: Array.isArray(user?.role) ? user!.role.join(', ') : user?.role ?? '',
+    phone: user?.phone ?? '',
   };
 
-  const handleLogout = () => {
-    // Handle logout logic
-    console.log('Logout pressed');
+  const handleLogout = async () => {
+    await logout();
   };
 
   const ProfileItem = ({
@@ -131,7 +127,7 @@ export const ProfileScreen: React.FC = () => {
             <ProfileItem
               icon="lock-closed-outline"
               label="Change Password"
-              onPress={() => navigation.navigate('ChangePassword')}
+              onPress={() => console.log('Change Password')}
             />
             <ProfileItem
               icon="language-outline"

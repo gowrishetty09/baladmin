@@ -48,10 +48,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isInitializing, setIsInitializing] = useState(true);
   const refreshTokenRef = useRef<string | null>(null);
 
+  const isAdminRole = useCallback((role: Admin['role']) => {
+    if (!role) return false;
+    const roles = Array.isArray(role) ? role : [role];
+    return roles.includes('ADMIN') || roles.includes('SUPER_ADMIN');
+  }, []);
+
   const ensureAdminUser = useCallback((nextUser: Admin) => {
-    if (!nextUser.role || !nextUser.role.includes('ADMIN')) {
+    if (!isAdminRole(nextUser.role)) {
       throw new Error('This account is not an admin account.');
     }
+  }, [isAdminRole]);
+
+  const toAdminUser = useCallback((rawUser: any): Admin => {
+    return {
+      id: String(rawUser?.id ?? ''),
+      name: String(rawUser?.name ?? rawUser?.displayName ?? rawUser?.email ?? 'Admin'),
+      email: String(rawUser?.email ?? ''),
+      role: rawUser?.role,
+      phone: rawUser?.phone,
+    };
   }, []);
 
   const logout = useCallback(async () => {
@@ -88,16 +104,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRefreshHandler(async (currentRefreshToken: string) => {
       try {
         const response = await apiService.refreshAdminToken(currentRefreshToken);
-        if (user) {
-          await persistAuth({
-            token: response.accessToken,
-            refreshToken: response.refreshToken,
-            refreshTokenExpiresAt: response.accessTokenExpiresAt,
-            user: response.user
-          });
-        }
+        const mappedUser = toAdminUser(response?.user);
+        ensureAdminUser(mappedUser);
+
+        await persistAuth({
+          token: response.accessToken,
+          refreshToken: response.refreshToken,
+          refreshTokenExpiresAt: response.refreshTokenExpiresAt,
+          user: mappedUser,
+        });
+
         refreshTokenRef.current = response.refreshToken;
         setToken(response.accessToken);
+        setUser(mappedUser);
         return {
           accessToken: response.accessToken,
           refreshToken: response.refreshToken
@@ -124,14 +143,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!response.accessToken) {
         throw new Error('Authentication response missing access token.');
       }
+
+      const mappedUser = toAdminUser(response.user);
       await hydrateAuth(
         response.accessToken,
         response.refreshToken,
-        response.accessTokenExpiresAt,
-        response.user
+        response.refreshTokenExpiresAt,
+        mappedUser
       );
     },
-    [hydrateAuth]
+    [hydrateAuth, toAdminUser]
   );
 
   const restoreSession = useCallback(async () => {
@@ -144,7 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const refreshExpiry = parsed.refreshTokenExpiresAt
               ? new Date(parsed.refreshTokenExpiresAt)
               : null;
-            
+
             if (refreshExpiry && refreshExpiry <= new Date()) {
               await clearPersistedAuth();
               return;
@@ -188,7 +209,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [user, token, isInitializing, login, logout, restoreSession]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return React.createElement(AuthContext.Provider, { value }, children);
 };
 
 export const useAuthContext = () => {

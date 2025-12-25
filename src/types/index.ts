@@ -121,12 +121,14 @@ export interface PaginatedResponse<T> {
 
 // Navigation types
 export type RootStackParamList = {
+  Login: undefined;
   MainTabs: undefined;
   BookingDetails: { bookingId: string };
   AssignDriver: { bookingId: string };
 };
 
 export type BottomTabParamList = {
+  Monitoring: undefined;
   Home: undefined;
   Bookings: { filter?: BookingStatus; filterSOS?: boolean } | undefined;
   Notifications: undefined;
