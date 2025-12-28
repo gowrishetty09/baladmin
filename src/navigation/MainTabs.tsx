@@ -19,7 +19,7 @@ export const MainTabs: React.FC = () => {
 
   return (
     <Tab.Navigator
-      initialRouteName="Monitoring"
+      initialRouteName="Home"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: isDark ? Colors.navy : Colors.gold,
@@ -47,8 +47,8 @@ export const MainTabs: React.FC = () => {
         },
       })}
     >
-      <Tab.Screen name="Monitoring" component={MonitoringScreen} />
       <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Monitoring" component={MonitoringScreen} />
       <Tab.Screen name="Bookings" component={BookingsScreen} />
       <Tab.Screen
         name="Notifications"
