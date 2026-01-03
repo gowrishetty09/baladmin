@@ -283,8 +283,8 @@ class ApiService {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
 
-      const fromDate = from || startOfMonth;
-      const toDate = to || endOfToday;
+      const fromDate = startOfMonth || from;
+      const toDate = endOfToday || to;
 
       const response = await this.api.get('/dashboard/bookings-summary', {
         params: { from: fromDate, to: toDate },
