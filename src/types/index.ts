@@ -67,6 +67,27 @@ export interface Booking {
   fare?: number;
 }
 
+// Expenses
+export type ExpenseType = 'FUEL' | 'TOLL' | 'OTHER';
+export type ExpenseStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface Expense {
+  id: string;
+  driverId: string;
+  driver?: {
+    id: string;
+    name: string;
+  };
+  expenseType: ExpenseType;
+  amount: number;
+  description?: string | null;
+  date: string;
+  status: ExpenseStatus;
+  adminComment?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Dashboard types
 export interface DashboardSummary {
   newBookingsToday: number;
@@ -131,6 +152,7 @@ export type BottomTabParamList = {
   Monitoring: undefined;
   Home: undefined;
   Bookings: { filter?: BookingStatus; filterSOS?: boolean } | undefined;
+  Expenses: undefined;
   Notifications: undefined;
   Profile: undefined;
 };

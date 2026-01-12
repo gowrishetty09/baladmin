@@ -1,15 +1,16 @@
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
-import { MonitoringScreen } from '../screens/MonitoringScreen';
-import { HomeScreen } from '../screens/HomeScreen';
-import { BookingsScreen } from '../screens/BookingsScreen';
-import { NotificationsScreen } from '../screens/NotificationsScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
-import { useNotificationsContext } from '../hooks/NotificationsContext';
-import { useThemeContext } from '../hooks/ThemeContext';
-import { BottomTabParamList } from '../types';
+import React from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
+import { Colors } from "../constants/colors";
+import { MonitoringScreen } from "../screens/MonitoringScreen";
+import { HomeScreen } from "../screens/HomeScreen";
+import { BookingsScreen } from "../screens/BookingsScreen";
+import { ExpensesScreen } from "../screens/ExpensesScreen";
+import { NotificationsScreen } from "../screens/NotificationsScreen";
+import { ProfileScreen } from "../screens/ProfileScreen";
+import { useNotificationsContext } from "../hooks/NotificationsContext";
+import { useThemeContext } from "../hooks/ThemeContext";
+import { BottomTabParamList } from "../types";
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
@@ -23,7 +24,9 @@ export const MainTabs: React.FC = () => {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: isDark ? Colors.navy : Colors.gold,
-        tabBarInactiveTintColor: isDark ? Colors.navy + '80' : Colors.navy + '99',
+        tabBarInactiveTintColor: isDark
+          ? Colors.navy + "80"
+          : Colors.navy + "99",
         tabBarStyle: {
           backgroundColor: isDark ? Colors.gold : Colors.white,
           borderTopWidth: 0,
@@ -38,11 +41,17 @@ export const MainTabs: React.FC = () => {
         },
         tabBarIcon: ({ color, size }) => {
           const name =
-            route.name === 'Monitoring' ? 'map' :
-            route.name === 'Home' ? 'home' :
-            route.name === 'Bookings' ? 'car' :
-            route.name === 'Notifications' ? 'notifications' :
-            'person';
+            route.name === "Monitoring"
+              ? "map"
+              : route.name === "Home"
+              ? "home"
+              : route.name === "Bookings"
+              ? "car"
+              : route.name === "Expenses"
+              ? "cash"
+              : route.name === "Notifications"
+              ? "notifications"
+              : "person";
           return <Ionicons name={name as any} size={size} color={color} />;
         },
       })}
@@ -50,6 +59,7 @@ export const MainTabs: React.FC = () => {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Monitoring" component={MonitoringScreen} />
       <Tab.Screen name="Bookings" component={BookingsScreen} />
+      <Tab.Screen name="Expenses" component={ExpensesScreen} />
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}

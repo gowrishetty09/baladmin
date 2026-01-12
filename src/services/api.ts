@@ -10,6 +10,8 @@ import {
   NotificationType,
   ApiResponse,
   Driver,
+  Expense,
+  ExpenseStatus,
 } from '../types';
 
 // Get base URL from environment or use default
@@ -425,6 +427,39 @@ class ApiService {
       console.error('Error fetching available drivers:', error);
       throw error;
     }
+  }
+
+  // Expenses (Admin)
+  async getAdminExpenses(filters?: {
+    status?: ExpenseStatus;
+    startDate?: string;
+    endDate?: string;
+    driverId?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ data: Expense[]; meta: { total: number; limit: number; offset: number } }> {
+    const params: any = {
+      limit: filters?.limit ?? 50,
+      offset: filters?.offset ?? 0,
+    };
+    if (filters?.status) params.status = filters.status;
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+    if (filters?.driverId) params.driverId = filters.driverId;
+
+    const response = await this.api.get('/admin/expenses', { params });
+    return {
+      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      meta: response.data?.meta ?? { total: 0, limit: params.limit, offset: params.offset },
+    };
+  }
+
+  async updateAdminExpense(
+    id: string,
+    payload: { status: 'APPROVED' | 'REJECTED'; adminComment?: string }
+  ): Promise<Expense> {
+    const response = await this.api.patch(`/admin/expenses/${id}`, payload);
+    return response.data;
   }
 
   // Push notifications - FCM
