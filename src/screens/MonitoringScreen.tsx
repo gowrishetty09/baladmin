@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import MapView, { Marker, AnimatedRegion } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useThemeContext } from '../hooks/ThemeContext';
+import useAuth from '../hooks/useAuth';
 
 type DriverLocation = {
   driverId: string;
@@ -41,14 +42,18 @@ const getWsUrlCandidates = (): string[] => {
 
 export const MonitoringScreen: React.FC = () => {
   const { isDark } = useThemeContext();
+  const { token } = useAuth();
 
   const [isConnected, setIsConnected] = useState(false);
   const [drivers, setDrivers] = useState<Record<string, DriverLocation>>({});
   const [connectedUrl, setConnectedUrl] = useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const coordsRef = useRef<Map<string, AnimatedRegion>>(new Map());
   const msgCountRef = useRef(0);
+  const mapRef = useRef<MapView | null>(null);
 
   const driverList = useMemo(() => Object.values(drivers), [drivers]);
 
@@ -87,7 +92,7 @@ export const MonitoringScreen: React.FC = () => {
   const extractLocation = (raw: any): DriverLocation | null => {
     if (!raw) return null;
 
-    const driverId = raw.driverId ?? raw.driver_id ?? raw.driver?.id ?? raw.driver?.driverId;
+    const driverId = raw.driverId ?? raw.driver_id ?? raw.id ?? raw.driver?.id ?? raw.driver?.driverId;
     const latitude = raw.latitude ?? raw.lat ?? raw.location?.latitude ?? raw.location?.lat;
     const longitude = raw.longitude ?? raw.lng ?? raw.lon ?? raw.location?.longitude ?? raw.location?.lng;
     if (driverId === undefined || latitude === undefined || longitude === undefined) return null;
@@ -103,6 +108,23 @@ export const MonitoringScreen: React.FC = () => {
     };
   };
 
+  const calculateBearing = (
+    from: { latitude: number; longitude: number },
+    to: { latitude: number; longitude: number }
+  ): number => {
+    const φ1 = (from.latitude * Math.PI) / 180;
+    const φ2 = (to.latitude * Math.PI) / 180;
+    const Δλ = ((to.longitude - from.longitude) * Math.PI) / 180;
+
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x =
+      Math.cos(φ1) * Math.sin(φ2) -
+      Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+    const θ = Math.atan2(y, x);
+    const deg = (θ * 180) / Math.PI;
+    return (deg + 360) % 360;
+  };
+
   const upsertDriver = (next: DriverLocation) => {
     setDrivers((prev) => {
       const current = prev[next.driverId];
@@ -111,7 +133,18 @@ export const MonitoringScreen: React.FC = () => {
       if (currentMs && nextMs && currentMs > nextMs) {
         return prev;
       }
-      return { ...prev, [next.driverId]: next };
+
+      const computedHeading =
+        next.heading !== undefined
+          ? next.heading
+          : current
+            ? calculateBearing(
+                { latitude: current.latitude, longitude: current.longitude },
+                { latitude: next.latitude, longitude: next.longitude }
+              )
+            : undefined;
+
+      return { ...prev, [next.driverId]: { ...next, heading: computedHeading } };
     });
 
     const existing = coordsRef.current.get(next.driverId);
@@ -163,7 +196,12 @@ export const MonitoringScreen: React.FC = () => {
         if (shouldLogWs) {
           console.log('[WS] Open');
         }
-        send('join', { room: 'monitoring' });
+        if (token) {
+          send('auth', { token });
+        } else {
+          // Best-effort join if token is missing; backend may reject.
+          send('join', { room: 'monitoring' });
+        }
       };
 
       ws.onmessage = (msg) => {
@@ -177,6 +215,16 @@ export const MonitoringScreen: React.FC = () => {
           // Support either envelope { event, data } OR direct payload.
           const envelopeEvent = (json as any)?.event ?? (json as any)?.type;
           const envelopeData = (json as any)?.data ?? (json as any)?.payload ?? json;
+
+          if (envelopeEvent === 'auth:ok') {
+            send('join', { room: 'monitoring' });
+            return;
+          }
+
+          if (envelopeEvent === 'auth:error') {
+            setIsConnected(false);
+            return;
+          }
 
           if (shouldLogWs && msgCountRef.current <= 25) {
             console.log('[WS] ←', envelopeEvent ?? '(no-event)', envelopeData);
@@ -250,7 +298,11 @@ export const MonitoringScreen: React.FC = () => {
         if (shouldLogWs) {
           console.log('[WS] Connected:', url);
         }
-        send('join', { room: 'monitoring' });
+        if (token) {
+          send('auth', { token });
+        } else {
+          send('join', { room: 'monitoring' });
+        }
       };
 
       ws.onerror = () => {
@@ -294,10 +346,48 @@ export const MonitoringScreen: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const visibleDrivers = useMemo(() => {
+    if (!selectedDriverIds.length) return driverList;
+    const selected = new Set(selectedDriverIds);
+    return driverList.filter((d) => selected.has(d.driverId));
+  }, [driverList, selectedDriverIds]);
+
+  const visibleKey = useMemo(() => {
+    return visibleDrivers
+      .map((d) => `${d.driverId}:${d.latitude.toFixed(5)},${d.longitude.toFixed(5)}`)
+      .join('|');
+  }, [visibleDrivers]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!selectedDriverIds.length) return;
+
+    const coords = visibleDrivers.map((d) => ({ latitude: d.latitude, longitude: d.longitude }));
+    if (!coords.length) return;
+
+    if (coords.length === 1) {
+      map.animateToRegion(
+        {
+          latitude: coords[0].latitude,
+          longitude: coords[0].longitude,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        },
+        600
+      );
+      return;
+    }
+
+    map.fitToCoordinates(coords, {
+      animated: true,
+      edgePadding: { top: 80, right: 80, bottom: 160, left: 80 },
+    });
+  }, [selectedDriverIds, visibleKey]);
+
   return (
     <View style={styles.container}>
-      <View style={[styles.header, !isDark && { backgroundColor: Colors.white }]}
-      >
+      <View style={[styles.header, !isDark && { backgroundColor: Colors.white }]}>
         <Text style={[styles.headerTitle, !isDark && { color: Colors.navy }]}>
           Monitoring
         </Text>
@@ -322,11 +412,14 @@ export const MonitoringScreen: React.FC = () => {
           <TouchableOpacity style={styles.refreshButton} onPress={connect}>
             <Ionicons name="refresh" size={18} color={Colors.navy} />
           </TouchableOpacity>
+          <TouchableOpacity style={styles.refreshButton} onPress={() => setIsFilterOpen(true)}>
+            <Ionicons name="filter" size={18} color={Colors.navy} />
+          </TouchableOpacity>
         </View>
       </View>
 
-      <MapView style={styles.map} initialRegion={initialRegion}>
-        {driverList.map((d) => {
+      <MapView ref={mapRef} style={styles.map} initialRegion={initialRegion}>
+        {visibleDrivers.map((d) => {
           const animated = coordsRef.current.get(d.driverId);
           return (
             <Marker.Animated
@@ -346,8 +439,74 @@ export const MonitoringScreen: React.FC = () => {
         })}
       </MapView>
 
+      <Modal
+        visible={isFilterOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsFilterOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Drivers</Text>
+              <TouchableOpacity onPress={() => setIsFilterOpen(false)}>
+                <Ionicons name="close" size={20} color={Colors.navy} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.actionPill, { backgroundColor: Colors.borderLight }]}
+                onPress={() => setSelectedDriverIds([])}
+              >
+                <Text style={styles.actionPillText}>Show All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionPill, { backgroundColor: Colors.primary }]}
+                onPress={() => setIsFilterOpen(false)}
+              >
+                <Text style={[styles.actionPillText, { color: Colors.white }]}>Done</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalList}>
+              {driverList.map((d) => {
+                const selected = selectedDriverIds.includes(d.driverId);
+                return (
+                  <TouchableOpacity
+                    key={d.driverId}
+                    style={[styles.modalRow, selected && { backgroundColor: Colors.primary + '10' }]}
+                    onPress={() => {
+                      setSelectedDriverIds((prev) =>
+                        prev.includes(d.driverId)
+                          ? prev.filter((id) => id !== d.driverId)
+                          : [...prev, d.driverId]
+                      );
+                    }}
+                  >
+                    <View style={styles.modalRowLeft}>
+                      <Text style={styles.modalRowTitle}>Driver {d.driverId}</Text>
+                      {d.bookingId ? (
+                        <Text style={styles.modalRowSub}>Booking: {d.bookingId}</Text>
+                      ) : (
+                        <Text style={styles.modalRowSub}>No booking</Text>
+                      )}
+                    </View>
+                    <Ionicons
+                      name={selected ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={selected ? Colors.primary : Colors.navy}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.bottomBar}>
-        <Text style={styles.bottomText}>{driverList.length} Drivers Visible</Text>
+        <Text style={styles.bottomText}>{visibleDrivers.length} Drivers Visible</Text>
         <Text style={styles.bottomSubText} numberOfLines={1}>
           {connectedUrl ? connectedUrl : getWsUrlCandidates()[0]}
         </Text>
@@ -444,5 +603,73 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.navy + '80',
     textAlign: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.navy,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  actionPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  actionPillText: {
+    fontWeight: '700',
+    color: Colors.navy,
+  },
+  modalList: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    marginTop: 6,
+  },
+  modalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  modalRowLeft: {
+    flex: 1,
+    marginRight: 10,
+  },
+  modalRowTitle: {
+    fontWeight: '700',
+    color: Colors.navy,
+  },
+  modalRowSub: {
+    marginTop: 2,
+    fontSize: 12,
+    color: Colors.navy,
+    opacity: 0.7,
   },
 });
