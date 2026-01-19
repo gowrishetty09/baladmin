@@ -28,7 +28,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.bal.admin",
-      "versionCode": 17,
+      "versionCode": 1,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDRN3_J4mGdkmWifoACmHBfT68sIvD3kQ8"
