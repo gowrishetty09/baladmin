@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useThemeContext } from '../hooks/ThemeContext';
 import useAuth from '../hooks/useAuth';
+import { getAdminSocket, isAdminSocketConnected } from '../services/adminSocket';
+import type { Socket } from 'socket.io-client';
 
 type DriverLocation = {
   driverId: string;
@@ -14,43 +16,32 @@ type DriverLocation = {
   heading?: number;
   speed?: number;
   timestamp: string;
-};
-
-type WSMessage<T = unknown> = {
-  event: string;
-  data: T;
+  status?: 'online' | 'offline';
+  lastSeenAt?: string;
 };
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL || 'https://bestaerolimo.online/api';
 
-const shouldLogWs =
+const shouldLogSocket =
   (__DEV__ && (process.env.EXPO_PUBLIC_DEBUG_WS === '1' || process.env.EXPO_PUBLIC_DEBUG_WS === 'true'));
 
-const getWsUrlCandidates = (): string[] => {
-  // In production, this backend is typically reverse-proxied under `/api`, so WS becomes `/api/ws`.
-  // Some deployments may expose WS directly at `/ws`.
+const getSocketBaseUrl = (): string => {
   const base = API_BASE_URL.replace(/\/+$/, '');
-  const origin = base.replace(/\/api\/?$/, '');
-
-  const apiWs = base.replace(/^http/, 'ws') + '/ws';
-  const rootWs = origin.replace(/^http/, 'ws') + '/ws';
-
-  // De-dupe, keep order (prefer api/ws first)
-  return Array.from(new Set([apiWs, rootWs]));
+  return base.replace(/\/api\/?$/, '');
 };
 
 export const MonitoringScreen: React.FC = () => {
   const { isDark } = useThemeContext();
   const { token } = useAuth();
 
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(isAdminSocketConnected());
   const [drivers, setDrivers] = useState<Record<string, DriverLocation>>({});
   const [connectedUrl, setConnectedUrl] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
 
-  const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const coordsRef = useRef<Map<string, AnimatedRegion>>(new Map());
   const msgCountRef = useRef(0);
   const mapRef = useRef<MapView | null>(null);
@@ -66,16 +57,6 @@ export const MonitoringScreen: React.FC = () => {
     }),
     [driverList]
   );
-
-  const send = (event: string, data: any) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    const payload = JSON.stringify({ event, data });
-    if (shouldLogWs) {
-      console.log(`[WS] → ${event}`, data);
-    }
-    ws.send(payload);
-  };
 
   const toMs = (value: any): number => {
     if (value === undefined || value === null) return 0;
@@ -144,7 +125,7 @@ export const MonitoringScreen: React.FC = () => {
               )
             : undefined;
 
-      return { ...prev, [next.driverId]: { ...next, heading: computedHeading } };
+      return { ...prev, [next.driverId]: { ...current, ...next, heading: computedHeading } };
     });
 
     const existing = coordsRef.current.get(next.driverId);
@@ -171,176 +152,110 @@ export const MonitoringScreen: React.FC = () => {
   };
 
   const connect = () => {
-    const urls = getWsUrlCandidates();
-
-    if (shouldLogWs) {
-      console.log('[WS] Candidate URLs:', urls);
-    }
-
-    try {
-      wsRef.current?.close();
-    } catch {
-      // ignore
-    }
-
-    setIsConnected(false);
-    setConnectedUrl(null);
+    const baseUrl = getSocketBaseUrl();
     msgCountRef.current = 0;
 
-    let attemptIndex = 0;
+    const socket = getAdminSocket(token);
+    if (!socket) {
+      setIsConnected(false);
+      setConnectedUrl(null);
+      return;
+    }
 
-    const attachHandlers = (ws: WebSocket) => {
-      ws.onopen = () => {
-        setIsConnected(true);
-        setConnectedUrl((ws as any)?._url ?? connectedUrl);
-        if (shouldLogWs) {
-          console.log('[WS] Open');
-        }
-        if (token) {
-          send('auth', { token });
-        } else {
-          // Best-effort join if token is missing; backend may reject.
-          send('join', { room: 'monitoring' });
-        }
-      };
+    socketRef.current = socket;
+    setIsConnected(socket.connected);
+    if (socket.connected) {
+      setConnectedUrl(baseUrl);
+    }
 
-      ws.onmessage = (msg) => {
-        try {
-          const rawText = String((msg as any)?.data ?? '');
-          if (!rawText) return;
-
-          msgCountRef.current += 1;
-          const json = JSON.parse(rawText);
-
-          // Support either envelope { event, data } OR direct payload.
-          const envelopeEvent = (json as any)?.event ?? (json as any)?.type;
-          const envelopeData = (json as any)?.data ?? (json as any)?.payload ?? json;
-
-          if (envelopeEvent === 'auth:ok') {
-            send('join', { room: 'monitoring' });
-            return;
-          }
-
-          if (envelopeEvent === 'auth:error') {
-            setIsConnected(false);
-            return;
-          }
-
-          if (shouldLogWs && msgCountRef.current <= 25) {
-            console.log('[WS] ←', envelopeEvent ?? '(no-event)', envelopeData);
-          }
-
-          const maybeList = Array.isArray(envelopeData) ? envelopeData : null;
-
-          const isDriverEvent = typeof envelopeEvent === 'string'
-            ? /driver/i.test(envelopeEvent) && /(loc|location|position|track)/i.test(envelopeEvent)
-            : false;
-
-          if (maybeList && (isDriverEvent || maybeList.length)) {
-            maybeList.forEach((item) => {
-              const loc = extractLocation(item);
-              if (loc) upsertDriver(loc);
-            });
-            return;
-          }
-
-          // Known event name
-          if (envelopeEvent === 'driver:location') {
-            const loc = extractLocation(envelopeData);
-            if (loc) upsertDriver(loc);
-            return;
-          }
-
-          // Fallback: if it looks like a location payload, accept it.
-          const loc = extractLocation(envelopeData);
-          if (loc) {
-            upsertDriver(loc);
-          }
-        } catch {
-          if (shouldLogWs) {
-            console.log('[WS] Non-JSON message or parse error');
-          }
-        }
-      };
-
-      ws.onclose = (evt: any) => {
-        if (shouldLogWs) {
-          console.log('[WS] Close', { code: evt?.code, reason: evt?.reason });
-        }
-        setIsConnected(false);
-      };
-
-      ws.onerror = (err) => {
-        if (shouldLogWs) {
-          console.log('[WS] Error', err);
-        }
-        setIsConnected(false);
-      };
+    const handleConnect = () => {
+      setIsConnected(true);
+      setConnectedUrl(baseUrl);
+      if (shouldLogSocket) {
+        console.log('[Socket] Connected');
+      }
     };
 
-    const tryNext = () => {
-      if (attemptIndex >= urls.length) {
-        setIsConnected(false);
-        setConnectedUrl(null);
+    const handleDisconnect = (reason: string) => {
+      if (shouldLogSocket) {
+        console.log('[Socket] Disconnected', reason);
+      }
+      setIsConnected(false);
+    };
+
+    const handleConnectError = (err: unknown) => {
+      if (shouldLogSocket) {
+        console.log('[Socket] Connect error', (err as any)?.message ?? err);
+      }
+      setIsConnected(false);
+    };
+
+    const handleAdminFleet = (payload: any) => {
+      msgCountRef.current += 1;
+      if (shouldLogSocket && msgCountRef.current <= 25) {
+        console.log('[Socket] ← admin:fleet', payload?.type ?? '(no-type)');
+      }
+
+      if (payload?.type === 'driver:location') {
+        const loc = extractLocation(payload?.data);
+        if (loc) upsertDriver(loc);
         return;
       }
 
-      const url = urls[attemptIndex++];
-      const ws = new WebSocket(url);
-      wsRef.current = ws;
+      if (payload?.type === 'driver:presence') {
+        const data = payload?.data;
+        const driverId = data?.driverId ? String(data.driverId) : null;
+        const status = data?.status === 'offline' ? 'offline' : data?.status === 'online' ? 'online' : null;
+        if (!driverId || !status) return;
 
-      let opened = false;
+        setDrivers((prev) => {
+          const current = prev[driverId];
+          if (!current) return prev;
+          return {
+            ...prev,
+            [driverId]: {
+              ...current,
+              status,
+              lastSeenAt: data?.lastSeenAt ? String(data.lastSeenAt) : current.lastSeenAt,
+            },
+          };
+        });
+        return;
+      }
 
-      ws.onopen = () => {
-        opened = true;
-        setIsConnected(true);
-        setConnectedUrl(url);
-        if (shouldLogWs) {
-          console.log('[WS] Connected:', url);
-        }
-        if (token) {
-          send('auth', { token });
-        } else {
-          send('join', { room: 'monitoring' });
-        }
-      };
-
-      ws.onerror = () => {
-        if (!opened) {
-          if (shouldLogWs) {
-            console.log('[WS] Failed:', url);
-          }
-          try {
-            ws.close();
-          } catch {
-            // ignore
-          }
-          tryNext();
-        }
-      };
-
-      ws.onclose = () => {
-        // If we never opened, this attempt failed: try the next URL.
-        if (!opened) {
-          tryNext();
-          return;
-        }
-        setIsConnected(false);
-      };
-
-      attachHandlers(ws);
+      if (payload?.type === 'snapshot') {
+        const driversList = Array.isArray(payload?.drivers) ? payload.drivers : [];
+        driversList.forEach((item: any) => {
+          const loc = extractLocation(item);
+          if (loc) upsertDriver(loc);
+        });
+      }
     };
 
-    tryNext();
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('connect_error', handleConnectError);
+    socket.on('admin:fleet', handleAdminFleet);
+
+    // Store handlers for cleanup
+    (socketRef as any)._handlers = { handleConnect, handleDisconnect, handleConnectError, handleAdminFleet };
   };
 
   useEffect(() => {
     connect();
     return () => {
-      try {
-        wsRef.current?.close();
-      } catch {
-        // ignore
+      // Only remove listeners, never disconnect the socket
+      const socket = socketRef.current;
+      const handlers = (socketRef as any)._handlers;
+      if (socket && handlers) {
+        socket.off('connect', handlers.handleConnect);
+        socket.off('disconnect', handlers.handleDisconnect);
+        socket.off('connect_error', handlers.handleConnectError);
+        socket.off('admin:fleet', handlers.handleAdminFleet);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -421,17 +336,18 @@ export const MonitoringScreen: React.FC = () => {
       <MapView ref={mapRef} style={styles.map} initialRegion={initialRegion}>
         {visibleDrivers.map((d) => {
           const animated = coordsRef.current.get(d.driverId);
+          const isOffline = d.status === 'offline';
           return (
             <Marker.Animated
               key={d.driverId}
               coordinate={(animated ?? { latitude: d.latitude, longitude: d.longitude }) as any}
               title={`Driver ${d.driverId}`}
-              description={d.bookingId ? `Booking: ${d.bookingId}` : undefined}
+              description={d.bookingId ? `Booking: ${d.bookingId}` : isOffline ? 'Offline' : undefined}
               rotation={d.heading ?? 0}
               flat
               anchor={{ x: 0.5, y: 0.5 }}
             >
-              <View style={styles.marker}>
+              <View style={[styles.marker, isOffline && { backgroundColor: Colors.navy + '80' }]}>
                 <Ionicons name="car" size={16} color={Colors.white} />
               </View>
             </Marker.Animated>
@@ -472,6 +388,7 @@ export const MonitoringScreen: React.FC = () => {
             <ScrollView style={styles.modalList}>
               {driverList.map((d) => {
                 const selected = selectedDriverIds.includes(d.driverId);
+                const isOffline = d.status === 'offline';
                 return (
                   <TouchableOpacity
                     key={d.driverId}
@@ -485,7 +402,9 @@ export const MonitoringScreen: React.FC = () => {
                     }}
                   >
                     <View style={styles.modalRowLeft}>
-                      <Text style={styles.modalRowTitle}>Driver {d.driverId}</Text>
+                      <Text style={styles.modalRowTitle}>
+                        Driver {d.driverId}{isOffline ? ' (offline)' : ''}
+                      </Text>
                       {d.bookingId ? (
                         <Text style={styles.modalRowSub}>Booking: {d.bookingId}</Text>
                       ) : (
@@ -508,7 +427,7 @@ export const MonitoringScreen: React.FC = () => {
       <View style={styles.bottomBar}>
         <Text style={styles.bottomText}>{visibleDrivers.length} Drivers Visible</Text>
         <Text style={styles.bottomSubText} numberOfLines={1}>
-          {connectedUrl ? connectedUrl : getWsUrlCandidates()[0]}
+          {connectedUrl ? connectedUrl : getSocketBaseUrl()}
         </Text>
       </View>
     </View>
