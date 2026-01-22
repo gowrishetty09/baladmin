@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Platform } from 'react-native';
 import MapView, { Marker, AnimatedRegion } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { Colors } from '../constants/colors';
 import { useThemeContext } from '../hooks/ThemeContext';
 import useAuth from '../hooks/useAuth';
@@ -34,6 +37,7 @@ const getSocketBaseUrl = (): string => {
 export const MonitoringScreen: React.FC = () => {
   const { isDark } = useThemeContext();
   const { token } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [isConnected, setIsConnected] = useState(isAdminSocketConnected());
   const [drivers, setDrivers] = useState<Record<string, DriverLocation>>({});
@@ -302,34 +306,42 @@ export const MonitoringScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, !isDark && { backgroundColor: Colors.white }]}>
-        <Text style={[styles.headerTitle, !isDark && { color: Colors.navy }]}>
-          Monitoring
-        </Text>
-        <View style={styles.headerRight}>
-          <View
-            style={[
-              styles.statusPill,
-              { backgroundColor: isConnected ? Colors.success + '20' : Colors.danger + '20' },
-            ]}
-          >
+      {/* Floating Header */}
+      <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
+        {Platform.OS === 'ios' ? (
+          <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFillObject} />
+        ) : (
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: Colors.navy + 'F5' }]} />
+        )}
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerTitle}>Monitoring</Text>
+            <Text style={styles.headerSubtitle}>Live driver tracking</Text>
+          </View>
+          <View style={styles.headerRight}>
             <View
               style={[
-                styles.statusDot,
-                { backgroundColor: isConnected ? Colors.success : Colors.danger },
+                styles.statusPill,
+                { backgroundColor: isConnected ? Colors.success + '25' : Colors.danger + '25' },
               ]}
-            />
-            <Text style={[styles.statusText, { color: isConnected ? Colors.success : Colors.danger }]}
             >
-              {isConnected ? 'Live' : 'Offline'}
-            </Text>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: isConnected ? Colors.success : Colors.danger },
+                ]}
+              />
+              <Text style={[styles.statusText, { color: isConnected ? Colors.success : Colors.danger }]}>
+                {isConnected ? 'Live' : 'Offline'}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.iconButton} onPress={connect}>
+              <Ionicons name="refresh" size={20} color={Colors.white} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} onPress={() => setIsFilterOpen(true)}>
+              <Ionicons name="options-outline" size={20} color={Colors.white} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.refreshButton} onPress={connect}>
-            <Ionicons name="refresh" size={18} color={Colors.navy} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.refreshButton} onPress={() => setIsFilterOpen(true)}>
-            <Ionicons name="filter" size={18} color={Colors.navy} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -424,11 +436,23 @@ export const MonitoringScreen: React.FC = () => {
         </View>
       </Modal>
 
+      {/* Bottom Stats Card */}
       <View style={styles.bottomBar}>
-        <Text style={styles.bottomText}>{visibleDrivers.length} Drivers Visible</Text>
-        <Text style={styles.bottomSubText} numberOfLines={1}>
-          {connectedUrl ? connectedUrl : getSocketBaseUrl()}
-        </Text>
+        <View style={styles.bottomStats}>
+          <View style={styles.statItem}>
+            <Ionicons name="car" size={20} color={Colors.gold} />
+            <Text style={styles.statValue}>{visibleDrivers.length}</Text>
+            <Text style={styles.statLabel}>Drivers</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Ionicons name={isConnected ? 'wifi' : 'wifi-outline'} size={20} color={isConnected ? Colors.success : Colors.danger} />
+            <Text style={[styles.statValue, { color: isConnected ? Colors.success : Colors.danger }]}>
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </Text>
+            <Text style={styles.statLabel}>Status</Text>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -439,32 +463,46 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
-  header: {
-    backgroundColor: Colors.navy,
+  headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'hidden',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerContent: {
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
+    paddingVertical: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    zIndex: 2,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.ivory,
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.white,
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: Colors.gold,
+    fontWeight: '500',
+    marginTop: 2,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    marginRight: 10,
   },
   statusDot: {
     width: 8,
@@ -476,28 +514,73 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  refreshButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: Colors.white,
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.white + '20',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
   },
   map: {
     flex: 1,
   },
   marker: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.gold,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: Colors.white,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    right: 16,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  bottomStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.navy,
+    marginTop: 4,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: Colors.navy + '80',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: Colors.borderLight,
+  },
   },
   bottomBar: {
     position: 'absolute',
@@ -525,40 +608,41 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: Colors.white,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 30,
     maxHeight: '70%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: Colors.navy,
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
+    gap: 10,
   },
   actionPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    minWidth: 120,
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
+    backgroundColor: Colors.borderLight,
   },
   actionPillText: {
     fontWeight: '700',
@@ -567,28 +651,28 @@ const styles = StyleSheet.create({
   modalList: {
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
-    marginTop: 6,
+    marginTop: 8,
   },
   modalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
   },
   modalRowLeft: {
     flex: 1,
-    marginRight: 10,
+    marginRight: 12,
   },
   modalRowTitle: {
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     color: Colors.navy,
   },
   modalRowSub: {
-    marginTop: 2,
+    marginTop: 4,
     fontSize: 12,
-    color: Colors.navy,
-    opacity: 0.7,
+    color: Colors.navy + '80',
   },
 });

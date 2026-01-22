@@ -8,14 +8,16 @@ import {
   Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { useThemeContext } from '../hooks/ThemeContext';
-import { GradientBackground } from '../components/GradientBackground';
 import { useAuthContext } from '../hooks/useAuthStore';
 
 export const ProfileScreen: React.FC = () => {
   const { isDark, toggleTheme } = useThemeContext();
   const { user, logout } = useAuthContext();
+  const insets = useSafeAreaInsets();
 
   const adminProfile = {
     name: user?.name ?? 'Admin',
@@ -61,20 +63,29 @@ export const ProfileScreen: React.FC = () => {
   );
 
   return (
-    <GradientBackground>
-      <View style={[styles.header, !isDark && { backgroundColor: Colors.white }]}>
-        <Text style={[styles.headerTitle, !isDark && { color: Colors.navy }]}>Profile</Text>
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Profile Header */}
-        <View style={styles.profileHeader}>
+    <View style={[styles.container, { backgroundColor: isDark ? Colors.navy : '#F5F7FA' }]}>
+      {/* Modern Gradient Header with Avatar */}
+      <LinearGradient
+        colors={isDark ? [Colors.navy, Colors.navy + 'EE'] : [Colors.navy, '#1E3A5F']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.headerGradient, { paddingTop: insets.top + 16 }]}
+      >
+        <Text style={styles.headerTitle}>Profile</Text>
+        
+        <View style={styles.avatarSection}>
           <View style={styles.avatarContainer}>
             <Ionicons name="person" size={48} color={Colors.white} />
           </View>
           <Text style={styles.profileName}>{adminProfile.name}</Text>
-          <Text style={styles.profileRole}>{adminProfile.role}</Text>
+          <View style={styles.roleBadge}>
+            <Ionicons name="shield-checkmark" size={14} color={Colors.gold} />
+            <Text style={styles.profileRole}>{adminProfile.role}</Text>
+          </View>
         </View>
+      </LinearGradient>
+
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
         {/* Profile Information */}
         <View style={styles.section}>
@@ -163,16 +174,16 @@ export const ProfileScreen: React.FC = () => {
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
+          <Ionicons name="log-out-outline" size={20} color={Colors.white} />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Limousine Admin App</Text>
-          <Text style={styles.footerSubtext}>© 2025 All rights reserved</Text>
+          <Text style={[styles.footerText, !isDark && { color: Colors.navy + '99' }]}>Limousine Admin App</Text>
+          <Text style={[styles.footerSubtext, !isDark && { color: Colors.navy + '66' }]}>© 2025 All rights reserved</Text>
         </View>
       </ScrollView>
-    </GradientBackground>
+    </View>
   );
 };
 
@@ -180,27 +191,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    backgroundColor: Colors.navy,
+  headerGradient: {
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.ivory,
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.white,
+    letterSpacing: -0.5,
+    marginBottom: 24,
   },
-  scrollView: {
-    flex: 1,
-  },
-  profileHeader: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
+  avatarSection: {
     alignItems: 'center',
-    paddingVertical: 32,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
   },
   avatarContainer: {
     width: 100,
@@ -209,44 +214,63 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gold,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    borderWidth: 4,
+    borderColor: Colors.white + '30',
   },
   profileName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.navy,
-    marginBottom: 4,
+    fontSize: 22,
+    fontWeight: '700',
+    color: Colors.white,
+    marginBottom: 8,
+  },
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.gold + '20',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   profileRole: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.gold,
-    backgroundColor: Colors.gold + '20',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  scrollView: {
+    flex: 1,
+    marginTop: -10,
   },
   section: {
-    marginTop: 16,
+    marginTop: 20,
     marginHorizontal: 16,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.ivory,
-    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.navy + '80',
+    marginBottom: 10,
     paddingHorizontal: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: Colors.white,
     borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   profileItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
   },
@@ -258,37 +282,41 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.gold + '20',
+    borderRadius: 12,
+    backgroundColor: Colors.gold + '15',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   profileItemLabel: {
-    fontSize: 14,
-    color: Colors.navy + '99',
+    fontSize: 12,
+    color: Colors.navy + '80',
     marginBottom: 2,
   },
   profileItemValue: {
-    fontSize: 16,
+    fontSize: 15,
     color: Colors.navy,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: Colors.danger,
     paddingVertical: 16,
     marginTop: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.danger,
+    marginHorizontal: 16,
+    borderRadius: 14,
+    shadowColor: Colors.danger,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logoutText: {
     fontSize: 16,
-    color: Colors.danger,
-    fontWeight: '600',
+    color: Colors.white,
+    fontWeight: '700',
     marginLeft: 8,
   },
   footer: {

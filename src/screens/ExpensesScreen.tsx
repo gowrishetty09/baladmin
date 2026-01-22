@@ -12,8 +12,9 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { GradientBackground } from "../components/GradientBackground";
 import { FilterDropdown } from "../components/FilterDropdown";
 import { Colors } from "../constants/colors";
 import ApiService from "../services/api";
@@ -87,6 +88,7 @@ const typeLabel = (value: Expense["expenseType"]) => {
 
 export const ExpensesScreen: React.FC = () => {
   const { isDark } = useThemeContext();
+  const insets = useSafeAreaInsets();
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -322,28 +324,36 @@ export const ExpensesScreen: React.FC = () => {
     selectedStatus || selectedDriver || startDateText || endDateText
   );
 
+  const pendingCount = expenses.filter((e) => e.status === "PENDING").length;
+
   return (
-    <GradientBackground>
-      <View
-        style={[styles.header, !isDark && { backgroundColor: Colors.white }]}
+    <View style={[styles.container, { backgroundColor: isDark ? Colors.navy : '#F5F7FA' }]}>
+      {/* Modern Header */}
+      <LinearGradient
+        colors={isDark ? [Colors.navy, Colors.navy + 'EE'] : [Colors.navy, '#1E3A5F']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
       >
-        <Text style={[styles.headerTitle, !isDark && { color: Colors.navy }]}>
-          Expenses
-        </Text>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            !isDark && { backgroundColor: Colors.gold + "15" },
-          ]}
-          onPress={() => setShowFilters(!showFilters)}
-        >
-          <Ionicons
-            name={showFilters ? "close" : "filter"}
-            size={24}
-            color={isDark ? Colors.ivory : Colors.gold}
-          />
-        </TouchableOpacity>
-      </View>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.headerTitle}>Expenses</Text>
+            <Text style={styles.headerSubtitle}>
+              {pendingCount > 0 ? `${pendingCount} pending approval` : 'All caught up!'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.filterButton, showFilters && styles.filterButtonActive]}
+            onPress={() => setShowFilters(!showFilters)}
+          >
+            <Ionicons
+              name={showFilters ? "close" : "options-outline"}
+              size={22}
+              color={Colors.white}
+            />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       {showFilters && (
         <View style={styles.filtersContainer}>
@@ -503,38 +513,66 @@ export const ExpensesScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </GradientBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   header: {
-    backgroundColor: Colors.navy,
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: Colors.ivory,
+    fontSize: 26,
+    fontWeight: "800",
+    color: Colors.white,
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: Colors.gold,
+    fontWeight: "500",
+    marginTop: 4,
   },
   filterButton: {
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.white + "15",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterButtonActive: {
+    backgroundColor: Colors.gold,
   },
   filtersContainer: {
     padding: 16,
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   filterLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: Colors.navy,
+    color: Colors.navy + "99",
     marginBottom: 8,
+    marginTop: 12,
   },
   dateRow: {
     flexDirection: "row",
@@ -543,17 +581,17 @@ const styles = StyleSheet.create({
   },
   dateInput: {
     flex: 1,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
+    backgroundColor: Colors.borderLight,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 12,
     color: Colors.navy,
+    fontSize: 14,
   },
   filterActionsRow: {
     flexDirection: "row",
     gap: 12,
+    marginTop: 8,
   },
   applyButton: {
     flex: 1,
@@ -563,11 +601,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: Colors.navy,
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   applyButtonText: {
     color: Colors.white,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   clearButton: {
     flex: 1,
@@ -577,17 +615,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: Colors.gold,
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   clearButtonText: {
     color: Colors.white,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   tableWrap: {
     padding: 16,
     paddingBottom: 32,
   },
-  headerRow: {
+  tableHeaderRow: {
     backgroundColor: Colors.gold + "22",
     borderRadius: 12,
   },

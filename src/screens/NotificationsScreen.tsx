@@ -7,7 +7,8 @@ import {
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
-import { GradientBackground } from '../components/GradientBackground';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
@@ -29,6 +30,7 @@ export const NotificationsScreen: React.FC = () => {
   const navigation = useNavigation<NotifNav>();
   const { notifications, setNotifications, refresh } = useNotificationsContext();
   const { isDark, colors } = useThemeContext();
+  const insets = useSafeAreaInsets();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
@@ -80,26 +82,31 @@ export const NotificationsScreen: React.FC = () => {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <GradientBackground>
-      <View style={[styles.header, !isDark && { backgroundColor: Colors.white }]}>
-        <View>
-          <Text style={[styles.headerTitle, !isDark && { color: Colors.navy }]}>Notifications</Text>
-          {unreadCount > 0 && (
-            <Text style={[styles.unreadCount, !isDark && { color: Colors.gold }]}>
-              {unreadCount} unread
+    <View style={[styles.container, { backgroundColor: isDark ? Colors.navy : '#F5F7FA' }]}>
+      {/* Modern Gradient Header */}
+      <LinearGradient
+        colors={isDark ? [Colors.navy, Colors.navy + 'EE'] : [Colors.navy, '#1E3A5F']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.headerTitle}>Notifications</Text>
+            <Text style={styles.headerSubtitle}>
+              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
             </Text>
+          </View>
+          {unreadCount > 0 && (
+            <TouchableOpacity
+              style={styles.markAllButton}
+              onPress={markAllAsRead}
+            >
+              <Ionicons name="checkmark-done" size={18} color={Colors.white} />
+            </TouchableOpacity>
           )}
         </View>
-        {unreadCount > 0 && (
-          <TouchableOpacity
-            style={[styles.markAllButton, !isDark && { backgroundColor: Colors.gold + '15' }]}
-            onPress={markAllAsRead}
-          >
-            <Ionicons name="checkmark-done" size={20} color={Colors.gold} />
-            <Text style={[styles.markAllText, !isDark && { color: Colors.gold }]}>Mark all read</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      </LinearGradient>
 
       <View style={styles.filterContainer}>
         <TouchableOpacity
@@ -161,13 +168,13 @@ export const NotificationsScreen: React.FC = () => {
               size={64}
               color={Colors.ivory}
             />
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, !isDark && { color: Colors.navy + '80' }]}>
               {showUnreadOnly ? 'No unread notifications' : 'No notifications'}
             </Text>
           </View>
         }
       />
-    </GradientBackground>
+    </View>
   );
 };
 
@@ -176,65 +183,65 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    backgroundColor: Colors.navy,
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.ivory,
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.white,
+    letterSpacing: -0.5,
   },
-  unreadCount: {
+  headerSubtitle: {
     fontSize: 14,
     color: Colors.gold,
-    marginTop: 2,
+    fontWeight: '500',
+    marginTop: 4,
   },
   markAllButton: {
-    flexDirection: 'row',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.white + '20',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-  },
-  markAllText: {
-    fontSize: 13,
-    color: Colors.gold,
-    fontWeight: '600',
-    marginLeft: 6,
   },
   filterContainer: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: Colors.white,
     flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    padding: 12,
+    gap: 10,
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 12,
+    borderRadius: 14,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: Colors.borderLight,
   },
   filterChipActive: {
     backgroundColor: Colors.gold,
-    borderColor: Colors.gold,
   },
   filterChipText: {
     fontSize: 14,
     color: Colors.navy,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   filterChipTextActive: {
     color: Colors.white,
@@ -251,7 +258,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
-    color: Colors.primary,
+    color: Colors.gold,
     fontWeight: 'bold',
   },
   listContent: {

@@ -8,12 +8,13 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
-import { GradientBackground } from '../components/GradientBackground';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BookingCard } from '../components/BookingCard';
 import { FilterDropdown } from '../components/FilterDropdown';
 import { Booking, BookingStatus, BottomTabParamList, RootStackParamList } from '../types';
@@ -31,6 +32,7 @@ export const BookingsScreen: React.FC = () => {
   const navigation = useNavigation<BookingsNav>();
   const route = useRoute<BookingsRoute>();
   const { isDark } = useThemeContext();
+  const insets = useSafeAreaInsets();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -169,23 +171,36 @@ export const BookingsScreen: React.FC = () => {
   const hasActiveFilters = selectedHotel || selectedDriver || selectedStatus;
 
   return (
-    <GradientBackground>
-      <View style={[styles.header, !isDark && { backgroundColor: Colors.white }]}>
-        <Text style={[styles.headerTitle, !isDark && { color: Colors.navy }]}>Bookings</Text>
-        <TouchableOpacity
-          style={[styles.filterButton, !isDark && { backgroundColor: Colors.gold + '15' }]}
-          onPress={() => setShowFilters(!showFilters)}
-        >
-          <Ionicons
-            name={showFilters ? 'close' : 'filter'}
-            size={24}
-            color={isDark ? Colors.ivory : Colors.gold}
-          />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: isDark ? Colors.navy : '#F5F7FA' }]}>
+      {/* Modern Header */}
+      <LinearGradient
+        colors={isDark ? [Colors.navy, Colors.navy + 'EE'] : [Colors.navy, '#1E3A5F']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.headerTitle}>Bookings</Text>
+            <Text style={styles.headerSubtitle}>
+              {filteredBookings.length} {filteredBookings.length === 1 ? 'ride' : 'rides'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.filterButton, showFilters && styles.filterButtonActive]}
+            onPress={() => setShowFilters(!showFilters)}
+          >
+            <Ionicons
+              name={showFilters ? 'close' : 'options-outline'}
+              size={22}
+              color={Colors.white}
+            />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       {showFilters && (
-        <View style={styles.filtersContainer}>
+        <View style={[styles.filtersContainer, { backgroundColor: isDark ? Colors.navy + 'DD' : Colors.white }]}>
           <FilterDropdown
             label="Hotel"
             value={selectedHotel}
@@ -271,7 +286,7 @@ export const BookingsScreen: React.FC = () => {
           </View>
         }
       />
-    </GradientBackground>
+    </View>
   );
 };
 
@@ -280,29 +295,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    backgroundColor: Colors.navy,
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.ivory,
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.white,
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: Colors.gold,
+    fontWeight: '500',
+    marginTop: 4,
   },
   filterButton: {
-    padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.white + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: Colors.gold,
   },
   filtersContainer: {
-    backgroundColor: Colors.white,
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    marginHorizontal: 16,
+    marginTop: -12,
+    borderRadius: 16,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   clearButton: {
     backgroundColor: Colors.primary,
