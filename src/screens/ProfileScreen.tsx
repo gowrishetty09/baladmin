@@ -71,7 +71,6 @@ export const ProfileScreen: React.FC = () => {
         end={{ x: 1, y: 1 }}
         style={[styles.headerGradient, { paddingTop: insets.top + 16 }]}
       >
-        <Text style={styles.headerTitle}>Profile</Text>
         
         <View style={styles.avatarSection}>
           <View style={styles.avatarContainer}>
@@ -190,6 +189,7 @@ export const ProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingBottom: 200,
   },
   headerGradient: {
     paddingHorizontal: 20,
