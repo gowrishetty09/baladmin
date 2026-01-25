@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Notification, NotificationType } from '../types';
 import { Colors } from '../constants/colors';
+import { useThemeContext } from '../hooks/ThemeContext';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -13,6 +14,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   notification,
   onPress,
 }) => {
+  const { isDark } = useThemeContext();
+  
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
       case NotificationType.NEW_BOOKING:
@@ -80,10 +83,11 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
     <TouchableOpacity
       style={[
         styles.container,
-        !notification.isRead && styles.unreadContainer,
+        { backgroundColor: isDark ? '#2A2A2A' : Colors.white, borderColor: isDark ? 'rgba(255,255,255,0.1)' : Colors.borderLight },
+        !notification.isRead && [styles.unreadContainer, { backgroundColor: isDark ? Colors.gold + '15' : Colors.gold + '10' }],
         isHighPriority && styles.highPriorityContainer,
         isHighPriority && { borderLeftColor: accentColor },
-      ]}
+      ]]
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -99,8 +103,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
           <Text
             style={[
               styles.title,
+              { color: isDark ? Colors.ivory : Colors.navy },
               !notification.isRead && styles.unreadTitle,
-              isHighPriority && { color: Colors.navy },
             ]}
           >
             {notification.title}
@@ -111,6 +115,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         <Text 
           style={[
             styles.message,
+            { color: isDark ? Colors.ivory + '99' : Colors.navy + '99' },
           ]} 
           numberOfLines={2}
         >
@@ -118,7 +123,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         </Text>
 
         <View style={styles.footer}>
-          <Text style={styles.time}>{timeAgo}</Text>
+          <Text style={[styles.time, { color: isDark ? Colors.ivory + '66' : Colors.navy + '66' }]}>{timeAgo}</Text>
           {notification.priority !== 'LOW' && !isHighPriority && (
             <View
               style={[

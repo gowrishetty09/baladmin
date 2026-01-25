@@ -7,12 +7,14 @@ import ApiService from '../services/api';
 import { Booking, RootStackParamList } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../components/GradientBackground';
+import { useThemeContext } from '../hooks/ThemeContext';
 
 type DetailsNav = NativeStackNavigationProp<RootStackParamList, 'BookingDetails'>;
 type DetailsProps = NativeStackScreenProps<RootStackParamList, 'BookingDetails'>;
 
 export const BookingDetailsScreen: React.FC<DetailsProps> = ({ route }) => {
   const navigation = useNavigation<DetailsNav>();
+  const { isDark } = useThemeContext();
   const bookingId = route.params.bookingId;
 
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -58,27 +60,27 @@ export const BookingDetailsScreen: React.FC<DetailsProps> = ({ route }) => {
           </View>
         )}
 
-        <View style={styles.card}>
-          <Text style={styles.title}>{booking.bookingId}</Text>
-          <Text style={styles.label}>Customer</Text>
-          <Text style={styles.value}>{booking.customerName}  ·  {booking.customerPhone}</Text>
+        <View style={[styles.card, { backgroundColor: isDark ? '#2A2A2A' : 'rgba(255,255,255,0.95)' }]}>
+          <Text style={[styles.title, { color: isDark ? Colors.ivory : Colors.navy }]}>{booking.bookingId}</Text>
+          <Text style={[styles.label, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Customer</Text>
+          <Text style={[styles.value, { color: isDark ? Colors.ivory : Colors.navy }]}>{booking.customerName}  ·  {booking.customerPhone}</Text>
 
-          <Text style={styles.label}>Pickup</Text>
-          <Text style={styles.value}>{booking.pickup.address}</Text>
+          <Text style={[styles.label, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Pickup</Text>
+          <Text style={[styles.value, { color: isDark ? Colors.ivory : Colors.navy }]}>{booking.pickup.address}</Text>
 
-          <Text style={styles.label}>Drop</Text>
-          <Text style={styles.value}>{booking.drop.address}</Text>
+          <Text style={[styles.label, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Drop</Text>
+          <Text style={[styles.value, { color: isDark ? Colors.ivory : Colors.navy }]}>{booking.drop.address}</Text>
 
-          <Text style={styles.label}>Vehicle</Text>
-          <Text style={styles.value}>{booking.vehicleCategory}</Text>
+          <Text style={[styles.label, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Vehicle</Text>
+          <Text style={[styles.value, { color: isDark ? Colors.ivory : Colors.navy }]}>{booking.vehicleCategory}</Text>
 
-          <Text style={styles.label}>Source</Text>
-          <Text style={styles.value}>{booking.source}{booking.hotelName ? ` · ${booking.hotelName}` : ''}</Text>
+          <Text style={[styles.label, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Source</Text>
+          <Text style={[styles.value, { color: isDark ? Colors.ivory : Colors.navy }]}>{booking.source}{booking.hotelName ? ` · ${booking.hotelName}` : ''}</Text>
 
           {booking.driver ? (
             <>
-              <Text style={styles.label}>Driver</Text>
-              <Text style={styles.value}>{booking.driver.name} · {booking.driver.vehicleNumber}</Text>
+              <Text style={[styles.label, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Driver</Text>
+              <Text style={[styles.value, { color: isDark ? Colors.ivory : Colors.navy }]}>{booking.driver.name} · {booking.driver.vehicleNumber}</Text>
             </>
           ) : (
             <View style={styles.warningRow}>

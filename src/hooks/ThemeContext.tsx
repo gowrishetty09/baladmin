@@ -22,12 +22,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       ...baseNav,
       colors: {
         ...baseNav.colors,
-        primary: isDark ? '#bd9250' : baseNav.colors.primary,
-        background: isDark ? '#151e2d' : palette.background,
-        card: isDark ? '#151e2d' : palette.cardBackground,
-        text: isDark ? '#f6f2ea' : palette.text,
-        border: isDark ? 'rgba(246, 242, 234, 0.14)' : palette.border,
-        notification: isDark ? '#bd9250' : baseNav.colors.notification,
+        primary: '#22C55E',
+        background: isDark ? '#1A1A1A' : palette.background,
+        card: isDark ? '#1A1A1A' : palette.cardBackground,
+        text: isDark ? '#F5F5F5' : palette.text,
+        border: isDark ? 'rgba(245, 245, 245, 0.14)' : palette.border,
+        notification: '#22C55E',
       },
     };
 

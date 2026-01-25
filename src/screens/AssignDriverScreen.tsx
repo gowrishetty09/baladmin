@@ -7,12 +7,14 @@ import { Colors } from '../constants/colors';
 import { Driver, RootStackParamList } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientBackground } from '../components/GradientBackground';
+import { useThemeContext } from '../hooks/ThemeContext';
 
 type AssignNav = NativeStackNavigationProp<RootStackParamList, 'AssignDriver'>;
 type AssignProps = NativeStackScreenProps<RootStackParamList, 'AssignDriver'>;
 
 export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
   const navigation = useNavigation<AssignNav>();
+  const { isDark } = useThemeContext();
   const bookingId = route.params.bookingId;
 
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -62,11 +64,11 @@ export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: isDark ? '#2A2A2A' : 'rgba(255,255,255,0.95)' }]}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.subtle}>{item.phone} · {item.vehicleNumber}</Text>
-              <Text style={styles.subtle}>Category: {item.vehicleCategory} · Rating: {item.rating}</Text>
+              <Text style={[styles.name, { color: isDark ? Colors.ivory : Colors.navy }]}>{item.name}</Text>
+              <Text style={[styles.subtle, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>{item.phone} · {item.vehicleNumber}</Text>
+              <Text style={[styles.subtle, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Category: {item.vehicleCategory} · Rating: {item.rating}</Text>
             </View>
             <TouchableOpacity
               style={styles.assignButton}

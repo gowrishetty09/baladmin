@@ -1,23 +1,23 @@
-// Dark mode palette (default)
-const Navy = '#151e2d';
-const Gold = '#bd9250';
-const Ivory = '#f6f2ea';
+// Modern neutral dark theme (matching customer app)
+const Navy = '#1A1A1A';
+const Gold = '#22C55E';  // Green accent
+const Ivory = '#F5F5F5';
 const White = '#ffffff';
-const PageNavy = 'rgba(21, 30, 45, 0.2)';
-const PageGold = 'rgba(189, 146, 80, 0.2)';
+const PageNavy = 'rgba(26, 26, 26, 0.92)';
+const PageGold = 'rgba(34, 197, 94, 0.5)';
 
 export const Colors = {
   // Brand / primary accents
   primary: Gold,
   secondary: Ivory,
   info: '#3b82f6',
-  success: '#10b981',
+  success: '#22C55E',
   warning: '#f59e0b',
   danger: '#ef4444',
 
   // Status colors (retain existing semantics)
   pending: '#f59e0b',
-  assigned: '#10b981',
+  assigned: '#22C55E',
   inProgress: '#3b82f6',
   completed: '#6b7280',
   cancelled: '#ef4444',
@@ -32,16 +32,16 @@ export const Colors = {
   // Text
   text: Ivory,
   textSecondary: White,
-  textLight: 'rgba(246, 242, 234, 0.7)',
+  textLight: 'rgba(245, 245, 245, 0.7)',
 
   // Borders / shadows
-  border: 'rgba(246, 242, 234, 0.14)',
-  borderLight: 'rgba(246, 242, 234, 0.08)',
+  border: 'rgba(245, 245, 245, 0.14)',
+  borderLight: 'rgba(245, 245, 245, 0.08)',
   shadow: 'rgba(0, 0, 0, 0.25)',
 
   // Base
   white: White,
-  grey: '#e3e6ebff,',
+  grey: '#e3e6eb',
   black: '#000000',
 
   // Named brand colors for direct use
@@ -52,27 +52,27 @@ export const Colors = {
   pagegold: PageGold,
 };
 
-// Light mode palette (current design)
+// Light mode palette
 export const LightColors = {
-  primary: '#2563eb',
+  primary: '#22C55E',
   secondary: '#10b981',
   danger: '#ef4444',
   warning: '#f59e0b',
-  success: '#10b981',
+  success: '#22C55E',
   info: '#3b82f6',
 
   pending: '#f59e0b',
-  assigned: '#10b981',
+  assigned: '#22C55E',
   inProgress: '#3b82f6',
   completed: '#6b7280',
   cancelled: '#ef4444',
   sos: '#dc2626',
 
-  background: '#f8fafc',
+  background: '#F5F5F5',
   cardBackground: '#ffffff',
 
-  text: '#1f2937',
-  textSecondary: '#6b7280',
+  text: '#1A1A1A',
+  textSecondary: '#666666',
   textLight: '#9ca3af',
 
   border: '#e5e7eb',

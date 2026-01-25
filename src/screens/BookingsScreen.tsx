@@ -234,22 +234,22 @@ export const BookingsScreen: React.FC = () => {
         </View>
       )}
 
-      <View style={styles.searchHeader}>
-        <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={18} color={Colors.navy + '80'} />
+      <View style={[styles.searchHeader, { backgroundColor: isDark ? '#2A2A2A' : 'rgba(255,255,255,0.9)' }]}>
+        <View style={[styles.searchInputContainer, { backgroundColor: isDark ? '#1A1A1A' : Colors.white, borderColor: isDark ? 'rgba(255,255,255,0.15)' : Colors.borderLight }]}>
+          <Ionicons name="search" size={18} color={isDark ? Colors.ivory + '80' : Colors.navy + '80'} />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Search bookings"
-            placeholderTextColor={Colors.navy + '66'}
-            style={styles.searchInput}
+            placeholderTextColor={isDark ? Colors.ivory + '66' : Colors.navy + '66'}
+            style={[styles.searchInput, { color: isDark ? Colors.ivory : Colors.navy }]}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close-circle" size={18} color={Colors.navy + '80'} />
+              <Ionicons name="close-circle" size={18} color={isDark ? Colors.ivory + '80' : Colors.navy + '80'} />
             </TouchableOpacity>
           )}
         </View>

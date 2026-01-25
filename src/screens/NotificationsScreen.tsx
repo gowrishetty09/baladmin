@@ -108,10 +108,11 @@ export const NotificationsScreen: React.FC = () => {
         </View>
       </LinearGradient>
 
-      <View style={styles.filterContainer}>
+      <View style={[styles.filterContainer, { backgroundColor: isDark ? '#2A2A2A' : Colors.white }]}>
         <TouchableOpacity
           style={[
             styles.filterChip,
+            { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : Colors.borderLight },
             !showUnreadOnly && styles.filterChipActive,
           ]}
           onPress={() => setShowUnreadOnly(false)}
@@ -119,7 +120,8 @@ export const NotificationsScreen: React.FC = () => {
           <Text
             style={[
               styles.filterChipText,
-              !showUnreadOnly && { color: Colors.white },
+              { color: isDark ? Colors.ivory : Colors.navy },
+              !showUnreadOnly && { color: Colors.navy },
             ]}
           >
             All
@@ -128,6 +130,7 @@ export const NotificationsScreen: React.FC = () => {
         <TouchableOpacity
           style={[
             styles.filterChip,
+            { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : Colors.borderLight },
             showUnreadOnly && styles.filterChipActive,
           ]}
           onPress={() => setShowUnreadOnly(true)}
@@ -135,7 +138,8 @@ export const NotificationsScreen: React.FC = () => {
           <Text
             style={[
               styles.filterChipText,
-              showUnreadOnly && { color: Colors.white },
+              { color: isDark ? Colors.ivory : Colors.navy },
+              showUnreadOnly && { color: Colors.navy },
             ]}
           >
             Unread

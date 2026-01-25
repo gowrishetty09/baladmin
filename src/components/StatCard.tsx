@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
+import { useThemeContext } from '../hooks/ThemeContext';
 
 interface StatCardProps {
   title: string;
@@ -26,6 +27,8 @@ export const StatCard: React.FC<StatCardProps> = ({
   onPress,
   compact = false,
 }) => {
+  const { isDark } = useThemeContext();
+  
   const CardContent = () => (
     <>
       <View style={styles.topRow}>
@@ -45,8 +48,8 @@ export const StatCard: React.FC<StatCardProps> = ({
           </View>
         )}
       </View>
-      <Text style={[styles.value, gradient && { color: Colors.white }, compact && styles.valueCompact]}>{value}</Text>
-      <Text style={[styles.title, gradient && { color: Colors.white + 'CC' }, compact && styles.titleCompact]}>{title}</Text>
+      <Text style={[styles.value, gradient && { color: Colors.white }, compact && styles.valueCompact, !gradient && { color: isDark ? Colors.ivory : Colors.navy }]}>{value}</Text>
+      <Text style={[styles.title, gradient && { color: Colors.white + 'CC' }, compact && styles.titleCompact, !gradient && { color: isDark ? Colors.ivory + '99' : Colors.navy + '99' }]}>{title}</Text>
     </>
   );
 
@@ -69,7 +72,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <TouchableOpacity 
-      style={cardStyle} 
+      style={[cardStyle, { backgroundColor: isDark ? '#2A2A2A' : Colors.white }]} 
       onPress={onPress} 
       activeOpacity={0.85}
       disabled={!onPress}

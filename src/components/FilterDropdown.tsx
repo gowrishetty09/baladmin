@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeContext } from '../hooks/ThemeContext';
 
 interface FilterDropdownProps {
   label: string;
@@ -25,6 +26,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   onSelect,
   placeholder = 'Select...',
 }) => {
+  const { isDark } = useThemeContext();
   const [isVisible, setIsVisible] = useState(false);
 
   const selectedOption = options.find((opt) => opt.value === value);
@@ -36,16 +38,17 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: isDark ? Colors.ivory : Colors.navy }]}>{label}</Text>
       <TouchableOpacity
-        style={styles.dropdown}
+        style={[styles.dropdown, { backgroundColor: isDark ? '#2A2A2A' : Colors.white, borderColor: isDark ? 'rgba(255,255,255,0.15)' : Colors.borderLight }]}
         onPress={() => setIsVisible(true)}
         activeOpacity={0.7}
       >
         <Text
           style={[
             styles.dropdownText,
-            !selectedOption && styles.placeholderText,
+            { color: isDark ? Colors.ivory : Colors.navy },
+            !selectedOption && { color: isDark ? Colors.ivory + '66' : Colors.navy + '66' },
           ]}
         >
           {selectedOption ? selectedOption.label : placeholder}
@@ -53,7 +56,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
         <Ionicons
           name="chevron-down"
           size={20}
-          color={Colors.navy + '99'}
+          color={isDark ? Colors.ivory + '99' : Colors.navy + '99'}
         />
       </TouchableOpacity>
 

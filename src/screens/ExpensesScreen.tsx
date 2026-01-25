@@ -250,20 +250,20 @@ export const ExpensesScreen: React.FC = () => {
     const disabled = processingId === item.id;
 
     return (
-      <View style={[styles.row, !isDark && styles.rowLight]}>
-        <Text style={[styles.cell, styles.driverCell]} numberOfLines={1}>
+      <View style={[styles.row, { backgroundColor: isDark ? '#2A2A2A' : 'rgba(255,255,255,0.92)' }]}>
+        <Text style={[styles.cell, styles.driverCell, { color: isDark ? Colors.ivory : Colors.navy }]} numberOfLines={1}>
           {item.driver?.name ?? "—"}
         </Text>
-        <Text style={[styles.cell, styles.typeCell]}>
+        <Text style={[styles.cell, styles.typeCell, { color: isDark ? Colors.ivory : Colors.navy }]}>
           {typeLabel(item.expenseType)}
         </Text>
-        <Text style={[styles.cell, styles.amountCell]}>
+        <Text style={[styles.cell, styles.amountCell, { color: isDark ? Colors.ivory : Colors.navy }]}>
           RM {Number(item.amount ?? 0).toFixed(2)}
         </Text>
-        <Text style={[styles.cell, styles.descCell]} numberOfLines={1}>
+        <Text style={[styles.cell, styles.descCell, { color: isDark ? Colors.ivory : Colors.navy }]} numberOfLines={1}>
           {item.description || "—"}
         </Text>
-        <Text style={[styles.cell, styles.dateCell]}>
+        <Text style={[styles.cell, styles.dateCell, { color: isDark ? Colors.ivory : Colors.navy }]}>
           {formatDate(item.date)}
         </Text>
         <View style={[styles.cell, styles.statusCell]}>
@@ -356,7 +356,7 @@ export const ExpensesScreen: React.FC = () => {
       </LinearGradient>
 
       {showFilters && (
-        <View style={styles.filtersContainer}>
+        <View style={[styles.filtersContainer, { backgroundColor: isDark ? '#2A2A2A' : Colors.white }]}>
           <FilterDropdown
             label="Status"
             value={selectedStatus}
@@ -373,20 +373,20 @@ export const ExpensesScreen: React.FC = () => {
             placeholder="All Drivers"
           />
 
-          <Text style={styles.filterLabel}>Date Range (YYYY-MM-DD)</Text>
+          <Text style={[styles.filterLabel, { color: isDark ? Colors.ivory + '99' : Colors.navy + '99' }]}>Date Range (YYYY-MM-DD)</Text>
           <View style={styles.dateRow}>
             <TextInput
-              style={styles.dateInput}
+              style={[styles.dateInput, { backgroundColor: isDark ? '#1A1A1A' : Colors.borderLight, color: isDark ? Colors.ivory : Colors.navy }]}
               placeholder="Start"
-              placeholderTextColor={Colors.navy + "66"}
+              placeholderTextColor={isDark ? Colors.ivory + '66' : Colors.navy + '66'}
               value={startDateText}
               onChangeText={setStartDateText}
               autoCapitalize="none"
             />
             <TextInput
-              style={styles.dateInput}
+              style={[styles.dateInput, { backgroundColor: isDark ? '#1A1A1A' : Colors.borderLight, color: isDark ? Colors.ivory : Colors.navy }]}
               placeholder="End"
-              placeholderTextColor={Colors.navy + "66"}
+              placeholderTextColor={isDark ? Colors.ivory + '66' : Colors.navy + '66'}
               value={endDateText}
               onChangeText={setEndDateText}
               autoCapitalize="none"

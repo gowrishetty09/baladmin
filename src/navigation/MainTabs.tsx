@@ -2,7 +2,6 @@ import React from "react";
 import { View, Platform } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import { Colors } from "../constants/colors";
 import { MonitoringScreen } from "../screens/MonitoringScreen";
 import { HomeScreen } from "../screens/HomeScreen";
@@ -64,20 +63,7 @@ export const MainTabs: React.FC = () => {
               shadowRadius: 12,
             }),
           },
-          tabBarBackground: () => 
-            Platform.OS === "ios" ? (
-              <BlurView
-                intensity={isDark ? 80 : 95}
-                tint={isDark ? "dark" : "light"}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                }}
-              />
-            ) : null,
+          tabBarBackground: () => null,
           tabBarIcon: ({ color, focused }) => {
             const iconName = focused
               ? config.icon

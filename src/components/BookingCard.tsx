@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Booking, BookingStatus } from '../types';
 import { Colors } from '../constants/colors';
+import { useThemeContext } from '../hooks/ThemeContext';
 
 interface BookingCardProps {
   booking: Booking;
@@ -22,6 +23,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   onAssignDriver,
   onViewDetails,
 }) => {
+  const { isDark } = useThemeContext();
   const pan = useRef(new Animated.ValueXY()).current;
 
   const panResponder = useRef(
@@ -95,7 +97,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
       {...panResponder.panHandlers}
     >
       <TouchableOpacity
-        style={[styles.card, { borderLeftColor: statusColor }]}
+        style={[styles.card, { borderLeftColor: statusColor, backgroundColor: isDark ? '#2A2A2A' : Colors.white }]}
         onPress={onViewDetails}
         activeOpacity={0.9}
       >
@@ -110,14 +112,14 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.bookingId}>{booking.bookingId}</Text>
+            <Text style={[styles.bookingId, { color: isDark ? Colors.ivory : Colors.navy }]}>{booking.bookingId}</Text>
             <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
               <Text style={[styles.statusText, { color: statusColor }]}>
                 {getStatusText(booking.status)}
               </Text>
             </View>
           </View>
-          <View style={styles.sourceContainer}>
+          <View style={[styles.sourceContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : Colors.borderLight }]}>
             <Ionicons
               name={
                 booking.source === 'HOTEL'
@@ -127,42 +129,42 @@ export const BookingCard: React.FC<BookingCardProps> = ({
                   : 'person'
               }
               size={16}
-              color={Colors.textSecondary}
+              color={isDark ? Colors.ivory + '99' : Colors.textSecondary}
             />
-            <Text style={styles.sourceText}>{booking.source}</Text>
+            <Text style={[styles.sourceText, { color: isDark ? Colors.ivory + '99' : Colors.navy + '99' }]}>{booking.source}</Text>
           </View>
         </View>
 
         {/* Customer Info */}
         <View style={styles.customerInfo}>
-          <Ionicons name="person-outline" size={16} color={Colors.navy + '99'} />
-          <Text style={styles.customerName}>{booking.customerName}</Text>
+          <Ionicons name="person-outline" size={16} color={isDark ? Colors.ivory + '99' : Colors.navy + '99'} />
+          <Text style={[styles.customerName, { color: isDark ? Colors.ivory : Colors.navy }]}>{booking.customerName}</Text>
         </View>
 
         {/* Route */}
         <View style={styles.routeContainer}>
           <View style={styles.routeItem}>
             <View style={styles.pickupDot} />
-            <Text style={styles.locationText} numberOfLines={1}>
+            <Text style={[styles.locationText, { color: isDark ? Colors.ivory : Colors.navy }]} numberOfLines={1}>
               {booking.pickup.address}
             </Text>
           </View>
           <View style={styles.routeDivider}>
-            <Ionicons name="arrow-down" size={16} color={Colors.navy + '66'} />
+            <Ionicons name="arrow-down" size={16} color={isDark ? Colors.ivory + '66' : Colors.navy + '66'} />
           </View>
           <View style={styles.routeItem}>
             <View style={styles.dropDot} />
-            <Text style={styles.locationText} numberOfLines={1}>
+            <Text style={[styles.locationText, { color: isDark ? Colors.ivory : Colors.navy }]} numberOfLines={1}>
               {booking.drop.address}
             </Text>
           </View>
         </View>
 
         {/* Bottom Info */}
-        <View style={styles.bottomInfo}>
+        <View style={[styles.bottomInfo, { borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : Colors.borderLight }]}>
           <View style={styles.infoItem}>
-            <Ionicons name="car-outline" size={16} color={Colors.navy + '99'} />
-            <Text style={styles.infoText}>{booking.vehicleCategory}</Text>
+            <Ionicons name="car-outline" size={16} color={isDark ? Colors.ivory + '99' : Colors.navy + '99'} />
+            <Text style={[styles.infoText, { color: isDark ? Colors.ivory + '99' : Colors.navy + '99' }]}>{booking.vehicleCategory}</Text>
           </View>
           {booking.driver ? (
             <View style={styles.infoItem}>
@@ -183,7 +185,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
         {/* Swipe Hint */}
         <View style={styles.swipeHint}>
-          <Text style={styles.swipeHintText}>← View Details | Assign Driver →</Text>
+          <Text style={[styles.swipeHintText, { color: isDark ? Colors.ivory + '66' : Colors.navy + '66' }]}>← View Details | Assign Driver →</Text>
         </View>
       </TouchableOpacity>
     </Animated.View>

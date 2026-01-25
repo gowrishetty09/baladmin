@@ -42,22 +42,22 @@ export const ProfileScreen: React.FC = () => {
     onPress?: () => void;
   }) => (
     <TouchableOpacity
-      style={styles.profileItem}
+      style={[styles.profileItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : Colors.borderLight }]}
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={onPress ? 0.7 : 1}
     >
       <View style={styles.profileItemLeft}>
-        <View style={styles.iconContainer}>
+        <View style={[styles.iconContainer, { backgroundColor: isDark ? Colors.gold + '20' : Colors.gold + '15' }]}>
           <Ionicons name={icon} size={22} color={Colors.gold} />
         </View>
         <View>
-          <Text style={styles.profileItemLabel}>{label}</Text>
-          {value && <Text style={styles.profileItemValue}>{value}</Text>}
+          <Text style={[styles.profileItemLabel, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>{label}</Text>
+          {value && <Text style={[styles.profileItemValue, { color: isDark ? Colors.ivory : Colors.navy }]}>{value}</Text>}
         </View>
       </View>
       {onPress && (
-        <Ionicons name="chevron-forward" size={20} color={Colors.textLight} />
+        <Ionicons name="chevron-forward" size={20} color={isDark ? Colors.ivory + '50' : Colors.textLight} />
       )}
     </TouchableOpacity>
   );
@@ -88,8 +88,8 @@ export const ProfileScreen: React.FC = () => {
 
         {/* Profile Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Personal Information</Text>
+          <View style={[styles.card, { backgroundColor: isDark ? '#2A2A2A' : Colors.white }]}>
             <ProfileItem
               icon="mail-outline"
               label="Email"
@@ -110,21 +110,21 @@ export const ProfileScreen: React.FC = () => {
 
         {/* Settings */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Settings</Text>
+          <View style={[styles.card, { backgroundColor: isDark ? '#2A2A2A' : Colors.white }]}>
             <ProfileItem
               icon="notifications-outline"
               label="Notification Settings"
               onPress={() => console.log('Notifications')}
             />
-            <View style={styles.profileItem}>
+            <View style={[styles.profileItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : Colors.borderLight }]}>
               <View style={styles.profileItemLeft}>
-                <View style={styles.iconContainer}>
+                <View style={[styles.iconContainer, { backgroundColor: isDark ? Colors.gold + '20' : Colors.gold + '15' }]}>
                   <Ionicons name="moon" size={22} color={Colors.primary} />
                 </View>
                 <View>
-                  <Text style={styles.profileItemLabel}>Dark Mode</Text>
-                  <Text style={styles.profileItemValue}>{isDark ? 'Enabled' : 'Disabled'}</Text>
+                  <Text style={[styles.profileItemLabel, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Dark Mode</Text>
+                  <Text style={[styles.profileItemValue, { color: isDark ? Colors.ivory : Colors.navy }]}>{isDark ? 'Enabled' : 'Disabled'}</Text>
                 </View>
               </View>
               <Switch
@@ -150,8 +150,8 @@ export const ProfileScreen: React.FC = () => {
 
         {/* App Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>App Information</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>App Information</Text>
+          <View style={[styles.card, { backgroundColor: isDark ? '#2A2A2A' : Colors.white }]}>
             <ProfileItem
               icon="information-circle-outline"
               label="About"

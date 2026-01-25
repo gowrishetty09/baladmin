@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import MapView, { Marker, AnimatedRegion } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 import { Colors } from '../constants/colors';
 import { useThemeContext } from '../hooks/ThemeContext';
 import useAuth from '../hooks/useAuth';
@@ -260,10 +259,6 @@ export const MonitoringScreen: React.FC = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const visibleDrivers = useMemo(() => {
     if (!selectedDriverIds.length) return driverList;
@@ -308,11 +303,7 @@ export const MonitoringScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Floating Header */}
       <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
-        {Platform.OS === 'ios' ? (
-          <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFillObject} />
-        ) : (
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: Colors.navy + 'F5' }]} />
-        )}
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: Colors.navy + 'F5' }]} />
         <View style={styles.headerContent}>
           <View>
             <Text style={styles.headerTitle}>Monitoring</Text>
@@ -580,31 +571,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 40,
     backgroundColor: Colors.borderLight,
-  },
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 16,
-    left: 16,
-    right: 16,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  bottomText: {
-    fontSize: 14,
-    color: Colors.navy,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  bottomSubText: {
-    marginTop: 4,
-    fontSize: 11,
-    color: Colors.navy + '80',
-    textAlign: 'center',
   },
   modalBackdrop: {
     flex: 1,

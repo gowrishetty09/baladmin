@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeContext } from '../hooks/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48 - 12) / 2; // 16 padding each side + 12 gap
@@ -23,9 +24,11 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
   onPress,
   badge,
 }) => {
+  const { isDark } = useThemeContext();
+  
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, { backgroundColor: isDark ? '#2A2A2A' : Colors.white }]}
       onPress={onPress}
       activeOpacity={0.85}
     >
@@ -37,8 +40,8 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
           </View>
         )}
       </View>
-      <Text style={styles.title}>{title}</Text>
-      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      <Text style={[styles.title, { color: isDark ? Colors.ivory : Colors.navy }]}>{title}</Text>
+      {subtitle && <Text style={[styles.subtitle, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>{subtitle}</Text>}
     </TouchableOpacity>
   );
 };

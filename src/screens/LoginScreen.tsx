@@ -16,7 +16,7 @@ import { useAuthContext } from '../hooks/useAuthStore';
 import { getErrorMessage } from '../utils';
 import type { RootStackParamList } from '../types';
 
-const PLACEHOLDER_COLOR = 'rgba(0, 0, 0, 0.75)';
+const PLACEHOLDER_COLOR = 'rgba(255, 255, 255, 0.5)';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: COLORS.navy,
   },
   headerSection: {
     marginBottom: 40,
@@ -115,12 +115,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: COLORS.navy,
+    color: COLORS.ivory,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.textLight,
   },
   formGroup: {
     marginBottom: 20,
@@ -128,29 +128,29 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: COLORS.ivory,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.navy,
-    borderRadius: 8,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#000',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    color: COLORS.white,
   },
   errorText: {
-    color: '#d32f2f',
+    color: '#ef4444',
     marginBottom: 16,
     fontSize: 14,
     fontWeight: '500',
   },
   submitButton: {
-    backgroundColor: COLORS.navy,
+    backgroundColor: COLORS.gold,
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 12,
   },
@@ -158,9 +158,9 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#fff',
+    color: COLORS.navy,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
 

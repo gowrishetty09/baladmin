@@ -256,7 +256,7 @@ export const HomeScreen: React.FC = () => {
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
-          <View style={[styles.activityCard, { backgroundColor: isDark ? Colors.navy + 'CC' : Colors.white }]}>
+          <View style={[styles.activityCard, { backgroundColor: isDark ? '#2A2A2A' : Colors.white }]}>
             <ActivityItem
               icon="car"
               iconColor={Colors.success}
