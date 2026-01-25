@@ -87,7 +87,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         !notification.isRead && [styles.unreadContainer, { backgroundColor: isDark ? Colors.gold + '15' : Colors.gold + '10' }],
         isHighPriority && styles.highPriorityContainer,
         isHighPriority && { borderLeftColor: accentColor },
-      ]]
+      ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
