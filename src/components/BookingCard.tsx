@@ -101,7 +101,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         onPress={onViewDetails}
         activeOpacity={0.9}
       >
-        {/* SOS Alert Badge */}
+        {/* SOS Alert Badge  */}
         {booking.hasSOS && (
           <View style={styles.sosBadge}>
             <Ionicons name="alert-circle" size={20} color={Colors.white} />
