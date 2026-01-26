@@ -7,7 +7,7 @@ import {
   Modal,
   ScrollView,
 } from "react-native";
-import MapView, { Marker, AnimatedRegion } from "react-native-maps";
+import MapView, { Marker, AnimatedRegion, PROVIDER_GOOGLE } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -428,7 +428,12 @@ export const MonitoringScreen: React.FC = () => {
         </View>
       </View>
 
-      <MapView ref={mapRef} style={styles.map} initialRegion={initialRegion}>
+      <MapView 
+        ref={mapRef} 
+        style={styles.map} 
+        initialRegion={initialRegion}
+        provider={PROVIDER_GOOGLE}
+      >
         {visibleDrivers.map((d) => {
           const animated = coordsRef.current.get(d.driverId);
           const isOffline = d.status === "offline";
