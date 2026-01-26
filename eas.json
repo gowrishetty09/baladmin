@@ -28,6 +28,14 @@
       "ios": {
         "resourceClass": "m-medium"
       }
+    },
+    "production-apk": {
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "resourceClass": "m-medium"
+      }
     }
   }
 }
