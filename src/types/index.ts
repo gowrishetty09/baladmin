@@ -58,6 +58,7 @@ export interface Booking {
   driver?: Driver;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   scheduledTime: string;
   createdAt: string;
   hasSOS: boolean;
@@ -65,6 +66,26 @@ export interface Booking {
   hotelName?: string;
   kioskLocation?: string;
   fare?: number;
+  // Timing fields
+  pickupTime?: string;
+  dropTime?: string;
+  enRouteAt?: string;
+  arrivedAt?: string;
+  rideStartedAt?: string;
+  completedAt?: string;
+  // Flight info
+  flightNumber?: string;
+  flightEta?: string;
+  // Hotel/Kiosk specific
+  hotelId?: string;
+  kioskId?: string;
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
+  roomNumber?: string;
+  notes?: string;
+  // Customer specific
+  customerId?: string;
 }
 
 // Expenses
@@ -145,7 +166,7 @@ export type RootStackParamList = {
   Login: undefined;
   MainTabs: undefined;
   BookingDetails: { bookingId: string };
-  AssignDriver: { bookingId: string };
+  AssignDriver: { bookingId: string; isReassign?: boolean };
 };
 
 export type BottomTabParamList = {

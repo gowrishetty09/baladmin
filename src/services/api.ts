@@ -81,6 +81,8 @@ const normalizeBooking = (raw: any): Booking => {
     String(raw?.guestName ?? raw?.customerName ?? raw?.customer?.name ?? '');
   const customerPhone =
     String(raw?.guestPhone ?? raw?.customerPhone ?? raw?.customer?.phone ?? '');
+  const customerEmail =
+    raw?.guestEmail ?? raw?.customerEmail ?? raw?.customer?.email ?? undefined;
 
   const fareCandidate =
     raw?.finalAmount ?? raw?.finalPrice ?? raw?.paymentAmount ?? raw?.quotedPrice ?? raw?.fare;
@@ -119,6 +121,7 @@ const normalizeBooking = (raw: any): Booking => {
       : undefined,
     customerName,
     customerPhone,
+    customerEmail,
     scheduledTime: String(raw?.scheduledTime ?? raw?.pickupTime ?? raw?.createdAt ?? ''),
     createdAt: String(raw?.createdAt ?? ''),
     hasSOS: Boolean(raw?.hasSOS ?? (Array.isArray(raw?.sosAlerts) && raw.sosAlerts.length > 0)),
@@ -126,6 +129,26 @@ const normalizeBooking = (raw: any): Booking => {
     hotelName: raw?.hotelName ?? raw?.hotel?.name ?? undefined,
     kioskLocation: raw?.kioskLocation ?? undefined,
     fare: Number.isFinite(fare) ? fare : undefined,
+    // Timing fields
+    pickupTime: raw?.pickupTime ?? undefined,
+    dropTime: raw?.dropTime ?? undefined,
+    enRouteAt: raw?.enRouteAt ?? undefined,
+    arrivedAt: raw?.arrivedAt ?? undefined,
+    rideStartedAt: raw?.rideStartedAt ?? undefined,
+    completedAt: raw?.completedAt ?? undefined,
+    // Flight info
+    flightNumber: raw?.flightNumber ?? undefined,
+    flightEta: raw?.flightEta ?? undefined,
+    // Hotel/Kiosk specific
+    hotelId: raw?.hotelId ?? undefined,
+    kioskId: raw?.kioskId ?? undefined,
+    guestName: raw?.guestName ?? undefined,
+    guestPhone: raw?.guestPhone ?? undefined,
+    guestEmail: raw?.guestEmail ?? undefined,
+    roomNumber: raw?.roomNumber ?? undefined,
+    notes: raw?.notes ?? undefined,
+    // Customer specific
+    customerId: raw?.customerId ?? raw?.customer?.id ?? undefined,
   };
 };
 
@@ -422,9 +445,34 @@ class ApiService {
   async getAvailableDrivers(): Promise<Driver[]> {
     try {
       const response = await this.api.get('/dispatch/available-drivers');
-      return response.data || [];
+      // Backend returns { data: [...], meta: {...} } format
+      const rawData = response.data?.data ?? response.data ?? [];
+      const items = Array.isArray(rawData) ? rawData : [];
+      // Normalize driver data to match frontend Driver type
+      return items.map((d: any) => ({
+        id: String(d.id ?? ''),
+        name: String(d.name ?? ''),
+        phone: String(d.phone ?? ''),
+        vehicleNumber: d.vehicles?.[0]?.registrationNumber ?? '',
+        vehicleCategory: d.vehicles?.[0]?.category?.name ?? 'SEDAN',
+        rating: Number(d.rating ?? 4.5),
+        status: d.status === 'ACTIVE' ? 'AVAILABLE' : d.status ?? 'AVAILABLE',
+      }));
     } catch (error) {
       console.error('Error fetching available drivers:', error);
+      throw error;
+    }
+  }
+
+  async reassignDriver(bookingId: string, driverId: string, vehicleId?: string): Promise<Booking> {
+    try {
+      const response = await this.api.post(`/bookings/${bookingId}/assign`, {
+        driverId,
+        vehicleId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error reassigning driver:', error);
       throw error;
     }
   }

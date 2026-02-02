@@ -12,6 +12,22 @@ import { Booking, BookingStatus } from '../types';
 import { Colors } from '../constants/colors';
 import { useThemeContext } from '../hooks/ThemeContext';
 
+// Format time helper
+const formatTime = (dateStr: string) => {
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
 interface BookingCardProps {
   booking: Booking;
   onAssignDriver: () => void;
@@ -183,6 +199,34 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           )}
         </View>
 
+        {/* Time Info */}
+        <View style={[styles.timeInfo, { borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : Colors.borderLight }]}>
+          {booking.pickupTime && (
+            <View style={styles.timeItem}>
+              <Ionicons name="time-outline" size={14} color={Colors.success} />
+              <Text style={[styles.timeText, { color: isDark ? Colors.ivory + '99' : Colors.navy + '99' }]}>
+                Pickup: {formatTime(booking.pickupTime)}
+              </Text>
+            </View>
+          )}
+          {booking.scheduledTime && !booking.pickupTime && (
+            <View style={styles.timeItem}>
+              <Ionicons name="calendar-outline" size={14} color={isDark ? Colors.ivory + '99' : Colors.navy + '99'} />
+              <Text style={[styles.timeText, { color: isDark ? Colors.ivory + '99' : Colors.navy + '99' }]}>
+                Scheduled: {formatTime(booking.scheduledTime)}
+              </Text>
+            </View>
+          )}
+          {booking.completedAt && (
+            <View style={styles.timeItem}>
+              <Ionicons name="checkmark-circle-outline" size={14} color={Colors.completed} />
+              <Text style={[styles.timeText, { color: isDark ? Colors.ivory + '99' : Colors.navy + '99' }]}>
+                Completed: {formatTime(booking.completedAt)}
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* Swipe Hint */}
         <View style={styles.swipeHint}>
           <Text style={[styles.swipeHintText, { color: isDark ? Colors.ivory + '66' : Colors.navy + '66' }]}>← View Details | Assign Driver →</Text>
@@ -321,6 +365,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.navy + '99',
     marginLeft: 6,
+    fontWeight: '500',
+  },
+  timeInfo: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingTop: 8,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  timeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  timeText: {
+    fontSize: 11,
     fontWeight: '500',
   },
   swipeHint: {

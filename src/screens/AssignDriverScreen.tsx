@@ -16,10 +16,17 @@ export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
   const navigation = useNavigation<AssignNav>();
   const { isDark } = useThemeContext();
   const bookingId = route.params.bookingId;
+  const isReassign = route.params.isReassign ?? false;
 
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState<string | null>(null);
+
+  useEffect(() => {
+    navigation.setOptions({
+      title: isReassign ? 'Reassign Driver' : 'Assign Driver',
+    });
+  }, [navigation, isReassign]);
 
   useEffect(() => {
     const load = async () => {
@@ -27,7 +34,7 @@ export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
         const data = await ApiService.getAvailableDrivers();
         setDrivers(data);
       } catch (e) {
-        // noop
+        console.error('Error loading available drivers:', e);
       } finally {
         setLoading(false);
       }
@@ -39,11 +46,13 @@ export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
     try {
       setAssigning(driver.id);
       await ApiService.assignDriver(bookingId, driver.id);
-      Alert.alert('Driver Assigned', `${driver.name} assigned successfully.`, [
+      const actionText = isReassign ? 'reassigned' : 'assigned';
+      Alert.alert('Success', `${driver.name} ${actionText} successfully.`, [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (e) {
-      Alert.alert('Failed', 'Could not assign driver.');
+      const actionText = isReassign ? 'reassign' : 'assign';
+      Alert.alert('Failed', `Could not ${actionText} driver.`);
     } finally {
       setAssigning(null);
     }

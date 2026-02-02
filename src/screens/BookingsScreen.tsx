@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import { Booking, BookingStatus, BottomTabParamList, RootStackParamList } from '
 import { Colors } from '../constants/colors';
 import ApiService from '../services/api';
 import { useThemeContext } from '../hooks/ThemeContext';
+import useAuth from '../hooks/useAuth';
+import { getAdminSocket } from '../services/adminSocket';
 
 type BookingsNav = CompositeNavigationProp<
   BottomTabNavigationProp<BottomTabParamList, 'Bookings'>,
@@ -32,6 +34,7 @@ export const BookingsScreen: React.FC = () => {
   const navigation = useNavigation<BookingsNav>();
   const route = useRoute<BookingsRoute>();
   const { isDark } = useThemeContext();
+  const { token, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
@@ -46,10 +49,77 @@ export const BookingsScreen: React.FC = () => {
   const [selectedHotel, setSelectedHotel] = useState<string>('');
   const [selectedDriver, setSelectedDriver] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus | ''>('');
+  const [selectedSource, setSelectedSource] = useState<string>('');
+  const [selectedCustomer, setSelectedCustomer] = useState<string>('');
+
+  const loadBookings = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await ApiService.getBookings();
+      setBookings(data);
+      setFilteredBookings(data);
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadBookings();
-  }, []);
+  }, [loadBookings]);
+
+  // Real-time booking updates via WebSocket
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+
+    const socket = getAdminSocket(token);
+    if (!socket) return;
+
+    const handleAdminFleetUpdate = (payload: any) => {
+      const type = payload?.type;
+      
+      if (type === "ride:create") {
+        // New booking created - add to list
+        const ride = payload?.ride;
+        if (ride) {
+          setBookings((prev) => {
+            // Avoid duplicates
+            if (prev.some(b => b.id === ride.id || b.id === ride.bookingId)) {
+              return prev;
+            }
+            // Prepend new booking
+            return [{ ...ride, id: ride.bookingId ?? ride.id } as Booking, ...prev];
+          });
+        }
+      } else if (type === "ride:update") {
+        // Booking updated - update in list
+        const ride = payload?.ride;
+        const rideId = ride?.bookingId ?? ride?.id;
+        if (ride && rideId) {
+          setBookings((prev) =>
+            prev.map((b) =>
+              b.id === rideId
+                ? { ...b, status: ride.status, updatedAt: new Date().toISOString() }
+                : b
+            )
+          );
+        }
+      } else if (type === "ride:delete") {
+        // Booking deleted - remove from list
+        const rideId = payload?.rideId;
+        if (rideId) {
+          setBookings((prev) => prev.filter((b) => b.id !== rideId));
+        }
+      }
+    };
+
+    socket.on("admin:fleet", handleAdminFleetUpdate);
+
+    return () => {
+      socket.off("admin:fleet", handleAdminFleetUpdate);
+    };
+  }, [isAuthenticated, token]);
 
   useEffect(() => {
     const params = route.params;
@@ -64,20 +134,7 @@ export const BookingsScreen: React.FC = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [bookings, selectedHotel, selectedDriver, selectedStatus, searchQuery]);
-
-  const loadBookings = async () => {
-    try {
-      setIsLoading(true);
-      const data = await ApiService.getBookings();
-      setBookings(data);
-      setFilteredBookings(data);
-    } catch (error) {
-      console.error('Error loading bookings:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [bookings, selectedHotel, selectedDriver, selectedStatus, selectedSource, selectedCustomer, searchQuery]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -98,6 +155,14 @@ export const BookingsScreen: React.FC = () => {
 
     if (selectedStatus) {
       filtered = filtered.filter((b) => b.status === selectedStatus);
+    }
+
+    if (selectedSource) {
+      filtered = filtered.filter((b) => b.source === selectedSource);
+    }
+
+    if (selectedCustomer) {
+      filtered = filtered.filter((b) => b.customerName === selectedCustomer);
     }
 
     const query = searchQuery.trim().toLowerCase();
@@ -128,6 +193,8 @@ export const BookingsScreen: React.FC = () => {
     setSelectedHotel('');
     setSelectedDriver('');
     setSelectedStatus('');
+    setSelectedSource('');
+    setSelectedCustomer('');
     setSearchQuery('');
   };
 
@@ -168,7 +235,20 @@ export const BookingsScreen: React.FC = () => {
     { label: 'Cancelled', value: BookingStatus.CANCELLED },
   ];
 
-  const hasActiveFilters = selectedHotel || selectedDriver || selectedStatus;
+  const sourceOptions = [
+    { label: 'All Sources', value: '' },
+    { label: 'Hotel', value: 'HOTEL' },
+    { label: 'Kiosk', value: 'KIOSK' },
+    { label: 'Customer App', value: 'CUSTOMER' },
+  ];
+
+  const customerOptions = [
+    { label: 'All Customers', value: '' },
+    ...Array.from(new Set(bookings.filter((b) => b.customerName).map((b) => b.customerName!)))
+      .map((customer) => ({ label: customer, value: customer })),
+  ];
+
+  const hasActiveFilters = selectedHotel || selectedDriver || selectedStatus || selectedSource || selectedCustomer;
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? Colors.navy : '#F5F7FA' }]}>
@@ -223,6 +303,22 @@ export const BookingsScreen: React.FC = () => {
             options={statusOptions}
             onSelect={(value) => setSelectedStatus(value as BookingStatus | '')}
             placeholder="All Status"
+          />
+
+          <FilterDropdown
+            label="Source"
+            value={selectedSource}
+            options={sourceOptions}
+            onSelect={setSelectedSource}
+            placeholder="All Sources"
+          />
+
+          <FilterDropdown
+            label="Customer"
+            value={selectedCustomer}
+            options={customerOptions}
+            onSelect={setSelectedCustomer}
+            placeholder="All Customers"
           />
 
           {hasActiveFilters && (
