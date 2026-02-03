@@ -17,6 +17,7 @@ export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
   const { isDark } = useThemeContext();
   const bookingId = route.params.bookingId;
   const isReassign = route.params.isReassign ?? false;
+  const vehicleCategoryId = route.params.vehicleCategoryId;
 
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +32,10 @@ export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await ApiService.getAvailableDrivers();
+        // Filter drivers by vehicle category if provided
+        const data = await ApiService.getAvailableDrivers(
+          vehicleCategoryId ? { vehicleCategoryId } : undefined
+        );
         setDrivers(data);
       } catch (e) {
         console.error('Error loading available drivers:', e);
@@ -40,7 +44,7 @@ export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
       }
     };
     load();
-  }, []);
+  }, [vehicleCategoryId]);
 
   const assign = async (driver: Driver) => {
     try {

@@ -149,6 +149,17 @@ const normalizeBooking = (raw: any): Booking => {
     notes: raw?.notes ?? undefined,
     // Customer specific
     customerId: raw?.customerId ?? raw?.customer?.id ?? undefined,
+    // Vehicle info
+    vehicleCategoryId: raw?.vehicleCategoryId ?? raw?.vehicle?.categoryId ?? undefined,
+    vehicle: raw?.vehicle ? {
+      id: String(raw.vehicle.id ?? ''),
+      registrationNumber: raw.vehicle.registrationNumber ?? raw.vehicle.plateNumber ?? undefined,
+      make: raw.vehicle.make ?? undefined,
+      model: raw.vehicle.model ?? undefined,
+    } : undefined,
+    // Ride type
+    rideType: raw?.rideType ?? undefined,
+    tourPackageId: raw?.tourPackageId ?? undefined,
   };
 };
 
@@ -442,9 +453,13 @@ class ApiService {
   }
 
   // Drivers
-  async getAvailableDrivers(): Promise<Driver[]> {
+  async getAvailableDrivers(options?: { vehicleCategoryId?: string }): Promise<Driver[]> {
     try {
-      const response = await this.api.get('/dispatch/available-drivers');
+      const params: Record<string, string> = {};
+      if (options?.vehicleCategoryId) {
+        params.vehicleCategoryId = options.vehicleCategoryId;
+      }
+      const response = await this.api.get('/dispatch/available-drivers', { params });
       // Backend returns { data: [...], meta: {...} } format
       const rawData = response.data?.data ?? response.data ?? [];
       const items = Array.isArray(rawData) ? rawData : [];

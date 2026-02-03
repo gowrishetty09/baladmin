@@ -86,6 +86,17 @@ export interface Booking {
   notes?: string;
   // Customer specific
   customerId?: string;
+  // Vehicle info
+  vehicleCategoryId?: string;
+  vehicle?: {
+    id: string;
+    registrationNumber?: string;
+    make?: string;
+    model?: string;
+  };
+  // Ride type
+  rideType?: 'ONE_WAY' | 'ROUND_TRIP' | 'HOURLY' | 'DAILY' | 'AIRPORT' | 'TOUR';
+  tourPackageId?: string;
 }
 
 // Expenses
@@ -166,7 +177,7 @@ export type RootStackParamList = {
   Login: undefined;
   MainTabs: undefined;
   BookingDetails: { bookingId: string };
-  AssignDriver: { bookingId: string; isReassign?: boolean };
+  AssignDriver: { bookingId: string; isReassign?: boolean; vehicleCategoryId?: string };
 };
 
 export type BottomTabParamList = {

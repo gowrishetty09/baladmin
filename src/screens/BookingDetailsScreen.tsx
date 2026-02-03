@@ -437,6 +437,25 @@ export const BookingDetailsScreen: React.FC<DetailsProps> = ({ route }) => {
                 {booking.source}
               </Text>
             </View>
+            {/* Ride Type */}
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Type</Text>
+              <Text style={[styles.infoValue, { color: isDark ? Colors.ivory : Colors.navy }]}>
+                {(() => {
+                  const rideType = (booking as any).rideType;
+                  if (!rideType) return 'Ride';
+                  switch (rideType) {
+                    case 'DAILY': return 'Day Trip';
+                    case 'HOURLY': return 'Hourly';
+                    case 'ROUND_TRIP': return 'Round Trip';
+                    case 'AIRPORT': return 'Airport Transfer';
+                    case 'TOUR': return 'Tour Package';
+                    case 'ONE_WAY': return 'One Way';
+                    default: return rideType.replace(/_/g, ' ');
+                  }
+                })()}
+              </Text>
+            </View>
             {booking.hotelName && (
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Hotel</Text>
@@ -495,9 +514,17 @@ export const BookingDetailsScreen: React.FC<DetailsProps> = ({ route }) => {
                 <View style={styles.infoRow}>
                   <Text style={[styles.infoLabel, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Vehicle</Text>
                   <Text style={[styles.infoValue, { color: isDark ? Colors.ivory : Colors.navy }]}>
-                    {booking.driver.vehicleNumber}
+                    {(booking as any).vehicle?.registrationNumber || booking.driver.vehicleNumber || '-'}
                   </Text>
                 </View>
+                {((booking as any).vehicle?.make || (booking as any).vehicle?.model) && (
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>Car Details</Text>
+                    <Text style={[styles.infoValue, { color: isDark ? Colors.ivory : Colors.navy }]}>
+                      {[(booking as any).vehicle?.make, (booking as any).vehicle?.model].filter(Boolean).join(' ')}
+                    </Text>
+                  </View>
+                )}
               </>
             ) : (
               <View style={styles.warningRow}>
@@ -551,7 +578,10 @@ export const BookingDetailsScreen: React.FC<DetailsProps> = ({ route }) => {
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() =>
-              navigation.navigate("AssignDriver", { bookingId: booking.id })
+              navigation.navigate("AssignDriver", { 
+                bookingId: booking.id,
+                vehicleCategoryId: (booking as any).vehicleCategoryId ?? undefined,
+              })
             }
           >
             <Ionicons name="person-add" color={Colors.white} size={18} />
@@ -563,7 +593,11 @@ export const BookingDetailsScreen: React.FC<DetailsProps> = ({ route }) => {
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: Colors.navy }]}
             onPress={() =>
-              navigation.navigate("AssignDriver", { bookingId: booking.id, isReassign: true })
+              navigation.navigate("AssignDriver", { 
+                bookingId: booking.id, 
+                isReassign: true,
+                vehicleCategoryId: (booking as any).vehicleCategoryId ?? undefined,
+              })
             }
           >
             <Ionicons name="swap-horizontal" color={Colors.white} size={18} />
