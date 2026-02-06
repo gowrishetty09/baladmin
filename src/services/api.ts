@@ -42,12 +42,9 @@ const normalizeBookingStatus = (rawStatus: any): BookingStatus => {
     case 'COMPLETED':
       return BookingStatus.COMPLETED;
     case 'CANCELLED':
-    case 'QUOTE_REJECTED':
+    case 'NO_SHOW':
       return BookingStatus.CANCELLED;
     case 'REQUESTED':
-    case 'PRICED':
-    case 'QUOTED':
-    case 'QUOTE_ACCEPTED':
     case 'ACCEPTED':
     default:
       return BookingStatus.PENDING;
