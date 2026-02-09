@@ -4,7 +4,6 @@ import {
   FlatList,
   Modal,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -245,28 +244,26 @@ export const ExpensesScreen: React.FC = () => {
     }
   };
 
-  const renderRow = ({ item }: { item: Expense }) => {
+  const renderCard = ({ item }: { item: Expense }) => {
     const isPending = item.status === "PENDING";
     const disabled = processingId === item.id;
 
     return (
-      <View style={[styles.row, { backgroundColor: isDark ? '#2A2A2A' : 'rgba(255,255,255,0.92)' }]}>
-        <Text style={[styles.cell, styles.driverCell, { color: isDark ? Colors.ivory : Colors.navy }]} numberOfLines={1}>
-          {item.driver?.name ?? "—"}
-        </Text>
-        <Text style={[styles.cell, styles.typeCell, { color: isDark ? Colors.ivory : Colors.navy }]}>
-          {typeLabel(item.expenseType)}
-        </Text>
-        <Text style={[styles.cell, styles.amountCell, { color: isDark ? Colors.ivory : Colors.navy }]}>
-          RM {Number(item.amount ?? 0).toFixed(2)}
-        </Text>
-        <Text style={[styles.cell, styles.descCell, { color: isDark ? Colors.ivory : Colors.navy }]} numberOfLines={1}>
-          {item.description || "—"}
-        </Text>
-        <Text style={[styles.cell, styles.dateCell, { color: isDark ? Colors.ivory : Colors.navy }]}>
-          {formatDate(item.date)}
-        </Text>
-        <View style={[styles.cell, styles.statusCell]}>
+      <View style={[styles.card, { backgroundColor: isDark ? '#2A2A2A' : Colors.white }]}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardDriverInfo}>
+            <View style={[styles.cardAvatar, { backgroundColor: Colors.gold + '30' }]}>
+              <Ionicons name="person" size={18} color={Colors.gold} />
+            </View>
+            <View>
+              <Text style={[styles.cardDriverName, { color: isDark ? Colors.ivory : Colors.navy }]}>
+                {item.driver?.name ?? "Unknown Driver"}
+              </Text>
+              <Text style={[styles.cardDate, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]}>
+                {formatDate(item.date)}
+              </Text>
+            </View>
+          </View>
           <View
             style={[
               styles.statusPill,
@@ -275,47 +272,97 @@ export const ExpensesScreen: React.FC = () => {
               item.status === "REJECTED" && styles.statusRejected,
             ]}
           >
-            <Text style={styles.statusText}>{statusLabel(item.status)}</Text>
+            <Text style={[
+              styles.statusText,
+              item.status === "PENDING" && { color: Colors.warning },
+              item.status === "APPROVED" && { color: Colors.success },
+              item.status === "REJECTED" && { color: Colors.sos },
+            ]}>{statusLabel(item.status)}</Text>
           </View>
         </View>
-        <View style={[styles.cell, styles.actionsCell]}>
-          {isPending ? (
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  styles.approveBtn,
-                  disabled && styles.disabledBtn,
-                ]}
-                disabled={disabled}
-                onPress={() => openActionModal(item, "APPROVED")}
-              >
-                {disabled ? (
-                  <ActivityIndicator color={Colors.white} />
-                ) : (
-                  <Text style={styles.actionText}>Approve</Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  styles.rejectBtn,
-                  disabled && styles.disabledBtn,
-                ]}
-                disabled={disabled}
-                onPress={() => openActionModal(item, "REJECTED")}
-              >
-                {disabled ? (
-                  <ActivityIndicator color={Colors.white} />
-                ) : (
-                  <Text style={styles.actionText}>Reject</Text>
-                )}
-              </TouchableOpacity>
+
+        <View style={styles.cardBody}>
+          <View style={styles.cardRow}>
+            <View style={styles.cardField}>
+              <Text style={[styles.cardLabel, { color: isDark ? Colors.ivory + '66' : Colors.navy + '66' }]}>Type</Text>
+              <View style={[styles.typeBadge, { backgroundColor: isDark ? Colors.gold + '20' : Colors.gold + '15' }]}>
+                <Ionicons 
+                  name={item.expenseType === 'FUEL' ? 'car' : item.expenseType === 'TOLL' ? 'navigate' : 'receipt'} 
+                  size={14} 
+                  color={Colors.gold} 
+                />
+                <Text style={[styles.typeText, { color: isDark ? Colors.ivory : Colors.navy }]}>
+                  {typeLabel(item.expenseType)}
+                </Text>
+              </View>
             </View>
-          ) : (
-            <Text style={styles.muted}>—</Text>
-          )}
+            <View style={[styles.cardField, styles.cardFieldAmount]}>
+              <Text style={[styles.cardLabel, { color: isDark ? Colors.ivory + '66' : Colors.navy + '66' }]}>Amount</Text>
+              <Text style={[styles.cardAmount, { color: isDark ? Colors.ivory : Colors.navy }]}>
+                RM {Number(item.amount ?? 0).toFixed(2)}
+              </Text>
+            </View>
+          </View>
+
+          {item.description ? (
+            <View style={styles.cardDescriptionContainer}>
+              <Text style={[styles.cardLabel, { color: isDark ? Colors.ivory + '66' : Colors.navy + '66' }]}>Description</Text>
+              <Text style={[styles.cardDescription, { color: isDark ? Colors.ivory : Colors.navy }]} numberOfLines={2}>
+                {item.description}
+              </Text>
+            </View>
+          ) : null}
         </View>
+
+        {isPending && (
+          <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={[
+                styles.cardActionBtn,
+                styles.approveBtn,
+                disabled && styles.disabledBtn,
+              ]}
+              disabled={disabled}
+              onPress={() => openActionModal(item, "APPROVED")}
+            >
+              {disabled ? (
+                <ActivityIndicator color={Colors.white} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={18} color={Colors.white} />
+                  <Text style={styles.cardActionText}>Approve</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.cardActionBtn,
+                styles.rejectBtn,
+                disabled && styles.disabledBtn,
+              ]}
+              disabled={disabled}
+              onPress={() => openActionModal(item, "REJECTED")}
+            >
+              {disabled ? (
+                <ActivityIndicator color={Colors.white} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="close-circle" size={18} color={Colors.white} />
+                  <Text style={styles.cardActionText}>Reject</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {item.adminComment && (
+          <View style={[styles.cardComment, { backgroundColor: isDark ? '#1A1A1A' : Colors.borderLight }]}>
+            <Ionicons name="chatbubble" size={14} color={isDark ? Colors.ivory + '80' : Colors.navy + '80'} />
+            <Text style={[styles.cardCommentText, { color: isDark ? Colors.ivory + '80' : Colors.navy + '80' }]} numberOfLines={2}>
+              {item.adminComment}
+            </Text>
+          </View>
+        )}
       </View>
     );
   };
@@ -412,49 +459,33 @@ export const ExpensesScreen: React.FC = () => {
         </View>
       )}
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tableWrap}
-      >
-        <View>
-          <View style={[styles.row, styles.headerRow]}>
-            <Text style={[styles.headerCell, styles.driverCell]}>Driver</Text>
-            <Text style={[styles.headerCell, styles.typeCell]}>Type</Text>
-            <Text style={[styles.headerCell, styles.amountCell]}>Amount</Text>
-            <Text style={[styles.headerCell, styles.descCell]}>
-              Description
-            </Text>
-            <Text style={[styles.headerCell, styles.dateCell]}>Date</Text>
-            <Text style={[styles.headerCell, styles.statusCell]}>Status</Text>
-            <Text style={[styles.headerCell, styles.actionsCell]}>Actions</Text>
-          </View>
-
-          <FlatList
-            data={expenses}
-            keyExtractor={(item) => item.id}
-            renderItem={renderRow}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
-              />
-            }
-            ListEmptyComponent={
-              isLoading ? (
-                <View style={styles.emptyContainer}>
-                  <ActivityIndicator />
-                  <Text style={styles.emptyText}>Loading expenses...</Text>
-                </View>
-              ) : (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>No expenses found</Text>
-                </View>
-              )
-            }
+      <FlatList
+        data={expenses}
+        keyExtractor={(item) => item.id}
+        renderItem={renderCard}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={isDark ? Colors.gold : Colors.navy}
           />
-        </View>
-      </ScrollView>
+        }
+        ListEmptyComponent={
+          isLoading ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator color={isDark ? Colors.gold : Colors.navy} />
+              <Text style={[styles.emptyText, { color: isDark ? Colors.ivory : Colors.navy }]}>Loading expenses...</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="receipt-outline" size={48} color={isDark ? Colors.ivory + '40' : Colors.navy + '40'} />
+              <Text style={[styles.emptyText, { color: isDark ? Colors.ivory : Colors.navy }]}>No expenses found</Text>
+            </View>
+          )
+        }
+      />
 
       <Modal
         visible={modalVisible}
@@ -621,6 +652,134 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: "700",
   },
+  listContainer: {
+    padding: 16,
+    paddingBottom: 132,
+  },
+  card: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: "hidden",
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 14,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight + '40',
+  },
+  cardDriverInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cardAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cardDriverName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.navy,
+  },
+  cardDate: {
+    fontSize: 12,
+    color: Colors.navy + '80',
+    marginTop: 2,
+  },
+  cardBody: {
+    padding: 14,
+    paddingTop: 12,
+  },
+  cardRow: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  cardField: {
+    flex: 1,
+  },
+  cardFieldAmount: {
+    alignItems: "flex-end",
+  },
+  cardLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: Colors.navy + '66',
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  typeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  typeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.navy,
+  },
+  cardAmount: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: Colors.navy,
+  },
+  cardDescriptionContainer: {
+    marginTop: 12,
+  },
+  cardDescription: {
+    fontSize: 13,
+    color: Colors.navy,
+    lineHeight: 18,
+  },
+  cardActions: {
+    flexDirection: "row",
+    gap: 10,
+    padding: 14,
+    paddingTop: 0,
+  },
+  cardActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  cardActionText: {
+    color: Colors.white,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  cardComment: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 14,
+    marginBottom: 14,
+    padding: 10,
+    borderRadius: 10,
+  },
+  cardCommentText: {
+    flex: 1,
+    fontSize: 12,
+  },
   tableWrap: {
     padding: 16,
     paddingBottom: 32,
@@ -668,7 +827,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.borderLight,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: Colors.navy,
   },

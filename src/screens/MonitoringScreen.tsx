@@ -22,6 +22,8 @@ import type { Socket } from "socket.io-client";
 
 type DriverLocation = {
   driverId: string;
+  driverName?: string;
+  driverPhone?: string;
   bookingId?: string;
   latitude: number;
   longitude: number;
@@ -31,6 +33,27 @@ type DriverLocation = {
   status?: "online" | "offline";
   lastSeenAt?: string;
 };
+
+type ActiveRide = {
+  id: string;
+  bookingId: string;
+  status: string;
+  pickupAddress?: string;
+  dropAddress?: string;
+  customerName?: string;
+  customerPhone?: string;
+  driverId?: string;
+  driverName?: string;
+  driverPhone?: string;
+  driverLatitude?: number;
+  driverLongitude?: number;
+  pickupLat?: number;
+  pickupLng?: number;
+  dropLat?: number;
+  dropLng?: number;
+};
+
+type FilterMode = "drivers" | "rides";
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL || "https://bestaerolimo.online/api";
@@ -52,9 +75,12 @@ export const MonitoringScreen: React.FC = () => {
 
   const [isConnected, setIsConnected] = useState(isAdminSocketConnected());
   const [drivers, setDrivers] = useState<Record<string, DriverLocation>>({});
+  const [rides, setRides] = useState<Record<string, ActiveRide>>({});
   const [connectedUrl, setConnectedUrl] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
+  const [selectedRideIds, setSelectedRideIds] = useState<string[]>([]);
+  const [filterMode, setFilterMode] = useState<FilterMode>("drivers");
 
   const socketRef = useRef<Socket | null>(null);
   const coordsRef = useRef<Map<string, AnimatedRegion>>(new Map());
@@ -62,6 +88,7 @@ export const MonitoringScreen: React.FC = () => {
   const mapRef = useRef<MapView | null>(null);
 
   const driverList = useMemo(() => Object.values(drivers), [drivers]);
+  const rideList = useMemo(() => Object.values(rides), [rides]);
 
   const initialRegion = useMemo(
     () => ({
@@ -94,6 +121,8 @@ export const MonitoringScreen: React.FC = () => {
       raw.id ??
       raw.driver?.id ??
       raw.driver?.driverId;
+    const driverName = raw.name ?? raw.driverName ?? raw.driver?.name;
+    const driverPhone = raw.phone ?? raw.driverPhone ?? raw.driver?.phone;
     const latitude =
       raw.latitude ?? raw.lat ?? raw.location?.latitude ?? raw.location?.lat;
     const longitude =
@@ -122,6 +151,8 @@ export const MonitoringScreen: React.FC = () => {
 
     return {
       driverId: String(driverId),
+      driverName: driverName ? String(driverName) : undefined,
+      driverPhone: driverPhone ? String(driverPhone) : undefined,
       bookingId: raw.bookingId
         ? String(raw.bookingId)
         : raw.booking?.id
@@ -176,9 +207,18 @@ export const MonitoringScreen: React.FC = () => {
               )
             : undefined;
 
+      // Preserve existing name/phone if not provided in update, or use new values if available
+      const merged: DriverLocation = {
+        ...current,
+        ...next,
+        driverName: next.driverName ?? current?.driverName,
+        driverPhone: next.driverPhone ?? current?.driverPhone,
+        heading: computedHeading,
+      };
+
       return {
         ...prev,
-        [next.driverId]: { ...current, ...next, heading: computedHeading },
+        [next.driverId]: merged,
       };
     });
 
@@ -292,6 +332,37 @@ export const MonitoringScreen: React.FC = () => {
           const loc = extractLocation(item);
           if (loc) upsertDriver(loc);
         });
+
+        // Process rides from snapshot
+        const ridesList = Array.isArray(payload?.rides)
+          ? payload.rides
+          : [];
+        setRides((prev) => {
+          const updated = { ...prev };
+          ridesList.forEach((ride: any) => {
+            if (!ride?.id) return;
+            const driverLoc = ride.driverLocation || ride.driver?.location;
+            updated[ride.id] = {
+              id: ride.id,
+              bookingId: ride.bookingId || ride.id,
+              status: ride.status || "UNKNOWN",
+              pickupAddress: ride.pickupAddress,
+              dropAddress: ride.dropAddress,
+              customerName: ride.customerName,
+              customerPhone: ride.customerPhone,
+              driverId: ride.driverId || ride.driver?.id,
+              driverName: ride.driver?.name,
+              driverPhone: ride.driver?.phone,
+              driverLatitude: driverLoc?.lat ?? driverLoc?.latitude,
+              driverLongitude: driverLoc?.lng ?? driverLoc?.longitude,
+              pickupLat: ride.pickupLat,
+              pickupLng: ride.pickupLng,
+              dropLat: ride.dropLat,
+              dropLng: ride.dropLng,
+            };
+          });
+          return updated;
+        });
       }
     };
 
@@ -326,10 +397,26 @@ export const MonitoringScreen: React.FC = () => {
   }, [token]);
 
   const visibleDrivers = useMemo(() => {
+    if (filterMode === "rides") {
+      // When filtering by rides, show drivers associated with selected rides
+      if (!selectedRideIds.length) return [];
+      const selectedRides = rideList.filter((r) => selectedRideIds.includes(r.id));
+      const rideDriverIds = new Set(
+        selectedRides.map((r) => r.driverId).filter(Boolean)
+      );
+      return driverList.filter((d) => rideDriverIds.has(d.driverId));
+    }
     if (!selectedDriverIds.length) return driverList;
     const selected = new Set(selectedDriverIds);
     return driverList.filter((d) => selected.has(d.driverId));
-  }, [driverList, selectedDriverIds]);
+  }, [driverList, selectedDriverIds, filterMode, selectedRideIds, rideList]);
+
+  const visibleRides = useMemo(() => {
+    if (filterMode !== "rides") return [];
+    if (!selectedRideIds.length) return rideList;
+    const selected = new Set(selectedRideIds);
+    return rideList.filter((r) => selected.has(r.id));
+  }, [rideList, selectedRideIds, filterMode]);
 
   const visibleKey = useMemo(() => {
     return visibleDrivers
@@ -343,6 +430,43 @@ export const MonitoringScreen: React.FC = () => {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+
+    // Handle ride mode
+    if (filterMode === "rides" && selectedRideIds.length) {
+      const coords: { latitude: number; longitude: number }[] = [];
+      visibleRides.forEach((r) => {
+        if (r.driverLatitude && r.driverLongitude) {
+          coords.push({ latitude: r.driverLatitude, longitude: r.driverLongitude });
+        }
+        if (r.pickupLat && r.pickupLng) {
+          coords.push({ latitude: r.pickupLat, longitude: r.pickupLng });
+        }
+        if (r.dropLat && r.dropLng) {
+          coords.push({ latitude: r.dropLat, longitude: r.dropLng });
+        }
+      });
+      if (coords.length === 1) {
+        map.animateToRegion(
+          {
+            latitude: coords[0].latitude,
+            longitude: coords[0].longitude,
+            latitudeDelta: 0.02,
+            longitudeDelta: 0.02,
+          },
+          600,
+        );
+        return;
+      }
+      if (coords.length > 1) {
+        map.fitToCoordinates(coords, {
+          animated: true,
+          edgePadding: { top: 80, right: 80, bottom: 160, left: 80 },
+        });
+      }
+      return;
+    }
+
+    // Handle driver mode
     if (!selectedDriverIds.length) return;
 
     const coords = visibleDrivers.map((d) => ({
@@ -368,7 +492,7 @@ export const MonitoringScreen: React.FC = () => {
       animated: true,
       edgePadding: { top: 80, right: 80, bottom: 160, left: 80 },
     });
-  }, [selectedDriverIds, visibleKey]);
+  }, [selectedDriverIds, visibleKey, filterMode, selectedRideIds, visibleRides, visibleDrivers]);
 
   return (
     <View style={styles.container}>
@@ -446,10 +570,10 @@ export const MonitoringScreen: React.FC = () => {
                   longitude: d.longitude,
                 }) as any
               }
-              title={`Driver ${d.driverId}`}
+              title={d.driverName || `Driver ${d.driverId}`}
               description={
-                d.bookingId
-                  ? `Booking: ${d.bookingId}`
+                d.driverPhone
+                  ? d.driverPhone + (isOffline ? " (Offline)" : "")
                   : isOffline
                     ? "Offline"
                     : undefined
@@ -469,6 +593,35 @@ export const MonitoringScreen: React.FC = () => {
             </Marker.Animated>
           );
         })}
+        {/* Ride pickup and drop markers */}
+        {filterMode === "rides" && visibleRides.map((ride) => (
+          <React.Fragment key={`ride-${ride.id}`}>
+            {ride.pickupLat && ride.pickupLng && (
+              <Marker
+                coordinate={{ latitude: ride.pickupLat, longitude: ride.pickupLng }}
+                title={`Pickup: ${ride.pickupAddress || 'Pickup Location'}`}
+                description={ride.customerName ? `Customer: ${ride.customerName}` : undefined}
+                pinColor="green"
+              >
+                <View style={[styles.marker, { backgroundColor: Colors.success }]}>
+                  <Ionicons name="location" size={16} color={Colors.white} />
+                </View>
+              </Marker>
+            )}
+            {ride.dropLat && ride.dropLng && (
+              <Marker
+                coordinate={{ latitude: ride.dropLat, longitude: ride.dropLng }}
+                title={`Drop: ${ride.dropAddress || 'Drop Location'}`}
+                description={`Status: ${ride.status}`}
+                pinColor="red"
+              >
+                <View style={[styles.marker, { backgroundColor: Colors.danger }]}>
+                  <Ionicons name="flag" size={16} color={Colors.white} />
+                </View>
+              </Marker>
+            )}
+          </React.Fragment>
+        ))}
       </MapView>
 
       <Modal
@@ -480,9 +633,63 @@ export const MonitoringScreen: React.FC = () => {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter Drivers</Text>
+              <Text style={styles.modalTitle}>
+                {filterMode === "drivers" ? "Filter Drivers" : "Filter Rides"}
+              </Text>
               <TouchableOpacity onPress={() => setIsFilterOpen(false)}>
                 <Ionicons name="close" size={20} color={Colors.navy} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Filter Mode Tabs */}
+            <View style={styles.filterTabs}>
+              <TouchableOpacity
+                style={[
+                  styles.filterTab,
+                  filterMode === "drivers" && styles.filterTabActive,
+                ]}
+                onPress={() => {
+                  setFilterMode("drivers");
+                  setSelectedRideIds([]);
+                }}
+              >
+                <Ionicons
+                  name="car"
+                  size={18}
+                  color={filterMode === "drivers" ? Colors.white : Colors.navy}
+                />
+                <Text
+                  style={[
+                    styles.filterTabText,
+                    filterMode === "drivers" && styles.filterTabTextActive,
+                  ]}
+                >
+                  Drivers ({driverList.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.filterTab,
+                  filterMode === "rides" && styles.filterTabActive,
+                ]}
+                onPress={() => {
+                  setFilterMode("rides");
+                  setSelectedDriverIds([]);
+                }}
+              >
+                <Ionicons
+                  name="navigate"
+                  size={18}
+                  color={filterMode === "rides" ? Colors.white : Colors.navy}
+                />
+                <Text
+                  style={[
+                    styles.filterTabText,
+                    filterMode === "rides" && styles.filterTabTextActive,
+                  ]}
+                >
+                  Rides ({rideList.length})
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -492,7 +699,13 @@ export const MonitoringScreen: React.FC = () => {
                   styles.actionPill,
                   { backgroundColor: Colors.borderLight },
                 ]}
-                onPress={() => setSelectedDriverIds([])}
+                onPress={() => {
+                  if (filterMode === "drivers") {
+                    setSelectedDriverIds([]);
+                  } else {
+                    setSelectedRideIds([]);
+                  }
+                }}
               >
                 <Text style={styles.actionPillText}>Show All</Text>
               </TouchableOpacity>
@@ -507,45 +720,116 @@ export const MonitoringScreen: React.FC = () => {
             </View>
 
             <ScrollView style={styles.modalList}>
-              {driverList.map((d) => {
-                const selected = selectedDriverIds.includes(d.driverId);
-                const isOffline = d.status === "offline";
-                return (
-                  <TouchableOpacity
-                    key={d.driverId}
-                    style={[
-                      styles.modalRow,
-                      selected && { backgroundColor: Colors.primary + "10" },
-                    ]}
-                    onPress={() => {
-                      setSelectedDriverIds((prev) =>
-                        prev.includes(d.driverId)
-                          ? prev.filter((id) => id !== d.driverId)
-                          : [...prev, d.driverId],
-                      );
-                    }}
-                  >
-                    <View style={styles.modalRowLeft}>
-                      <Text style={styles.modalRowTitle}>
-                        Driver {d.driverId}
-                        {isOffline ? " (offline)" : ""}
-                      </Text>
-                      {d.bookingId ? (
-                        <Text style={styles.modalRowSub}>
-                          Booking: {d.bookingId}
+              {filterMode === "drivers" &&
+                driverList.map((d) => {
+                  const selected = selectedDriverIds.includes(d.driverId);
+                  const isOffline = d.status === "offline";
+                  return (
+                    <TouchableOpacity
+                      key={d.driverId}
+                      style={[
+                        styles.modalRow,
+                        selected && { backgroundColor: Colors.primary + "10" },
+                      ]}
+                      onPress={() => {
+                        setSelectedDriverIds((prev) =>
+                          prev.includes(d.driverId)
+                            ? prev.filter((id) => id !== d.driverId)
+                            : [...prev, d.driverId],
+                        );
+                      }}
+                    >
+                      <View style={styles.modalRowLeft}>
+                        <Text style={styles.modalRowTitle}>
+                          {d.driverName || `Driver ${d.driverId}`}
+                          {isOffline ? " (offline)" : ""}
                         </Text>
-                      ) : (
-                        <Text style={styles.modalRowSub}>No booking</Text>
-                      )}
-                    </View>
-                    <Ionicons
-                      name={selected ? "checkbox" : "square-outline"}
-                      size={20}
-                      color={selected ? Colors.primary : Colors.navy}
-                    />
-                  </TouchableOpacity>
-                );
-              })}
+                        <Text style={styles.modalRowSub}>
+                          {d.driverPhone || "No phone"}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name={selected ? "checkbox" : "square-outline"}
+                        size={20}
+                        color={selected ? Colors.primary : Colors.navy}
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
+              {filterMode === "rides" &&
+                rideList.map((ride) => {
+                  const selected = selectedRideIds.includes(ride.id);
+                  return (
+                    <TouchableOpacity
+                      key={ride.id}
+                      style={[
+                        styles.modalRow,
+                        selected && { backgroundColor: Colors.primary + "10" },
+                      ]}
+                      onPress={() => {
+                        setSelectedRideIds((prev) =>
+                          prev.includes(ride.id)
+                            ? prev.filter((id) => id !== ride.id)
+                            : [...prev, ride.id],
+                        );
+                      }}
+                    >
+                      <View style={styles.modalRowLeft}>
+                        <View style={styles.rideStatusRow}>
+                          <View
+                            style={[
+                              styles.rideStatusBadge,
+                              {
+                                backgroundColor:
+                                  ride.status === "PICKED_UP" || ride.status === "IN_PROGRESS"
+                                    ? Colors.success + "20"
+                                    : ride.status === "EN_ROUTE" || ride.status === "DRIVER_EN_ROUTE"
+                                    ? Colors.gold + "20"
+                                    : Colors.primary + "20",
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.rideStatusText,
+                                {
+                                  color:
+                                    ride.status === "PICKED_UP" || ride.status === "IN_PROGRESS"
+                                      ? Colors.success
+                                      : ride.status === "EN_ROUTE" || ride.status === "DRIVER_EN_ROUTE"
+                                      ? Colors.gold
+                                      : Colors.primary,
+                                },
+                              ]}
+                            >
+                              {ride.status}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.modalRowTitle} numberOfLines={1}>
+                          {ride.pickupAddress || "Pickup"} → {ride.dropAddress || "Drop"}
+                        </Text>
+                        <Text style={styles.modalRowSub}>
+                          {ride.driverName
+                            ? `Driver: ${ride.driverName}`
+                            : "No driver assigned"}
+                          {ride.customerName ? ` • ${ride.customerName}` : ""}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name={selected ? "checkbox" : "square-outline"}
+                        size={20}
+                        color={selected ? Colors.primary : Colors.navy}
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
+              {filterMode === "rides" && rideList.length === 0 && (
+                <View style={styles.emptyState}>
+                  <Ionicons name="navigate-outline" size={40} color={Colors.navy + "40"} />
+                  <Text style={styles.emptyStateText}>No active rides</Text>
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -556,8 +840,14 @@ export const MonitoringScreen: React.FC = () => {
         <View style={styles.bottomStats}>
           <View style={styles.statItem}>
             <Ionicons name="car" size={20} color={Colors.gold} />
-            <Text style={styles.statValue}>{visibleDrivers.length}</Text>
+            <Text style={styles.statValue}>{driverList.length}</Text>
             <Text style={styles.statLabel}>Drivers</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Ionicons name="navigate" size={20} color={Colors.primary} />
+            <Text style={styles.statValue}>{rideList.length}</Text>
+            <Text style={styles.statLabel}>Active Rides</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
@@ -572,7 +862,7 @@ export const MonitoringScreen: React.FC = () => {
                 { color: isConnected ? Colors.success : Colors.danger },
               ]}
             >
-              {isConnected ? "Connected" : "Disconnected"}
+              {isConnected ? "Live" : "Offline"}
             </Text>
             <Text style={styles.statLabel}>Status</Text>
           </View>
@@ -773,5 +1063,55 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
     color: Colors.navy + "80",
+  },
+  filterTabs: {
+    flexDirection: "row",
+    marginBottom: 12,
+    gap: 8,
+  },
+  filterTab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: Colors.borderLight,
+    gap: 6,
+  },
+  filterTabActive: {
+    backgroundColor: Colors.primary,
+  },
+  filterTabText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.navy,
+  },
+  filterTabTextActive: {
+    color: Colors.white,
+  },
+  rideStatusRow: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  rideStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  rideStatusText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: Colors.navy + "60",
   },
 });
