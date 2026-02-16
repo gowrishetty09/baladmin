@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,28 +7,34 @@ import {
   RefreshControl,
   TouchableOpacity,
   TextInput,
-} from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { CompositeNavigationProp, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BookingCard } from '../components/BookingCard';
-import { FilterDropdown } from '../components/FilterDropdown';
-import { Booking, BookingStatus, BottomTabParamList, RootStackParamList } from '../types';
-import { Colors } from '../constants/colors';
-import ApiService from '../services/api';
-import { useThemeContext } from '../hooks/ThemeContext';
-import useAuth from '../hooks/useAuth';
-import { getAdminSocket } from '../services/adminSocket';
+} from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { CompositeNavigationProp, RouteProp } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BookingCard } from "../components/BookingCard";
+import { BookingsTableView } from "../components/BookingsTableView";
+import { FilterDropdown } from "../components/FilterDropdown";
+import {
+  Booking,
+  BookingStatus,
+  BottomTabParamList,
+  RootStackParamList,
+} from "../types";
+import { Colors } from "../constants/colors";
+import ApiService from "../services/api";
+import { useThemeContext } from "../hooks/ThemeContext";
+import useAuth from "../hooks/useAuth";
+import { getAdminSocket } from "../services/adminSocket";
 
 type BookingsNav = CompositeNavigationProp<
-  BottomTabNavigationProp<BottomTabParamList, 'Bookings'>,
+  BottomTabNavigationProp<BottomTabParamList, "Bookings">,
   NativeStackNavigationProp<RootStackParamList>
 >;
-type BookingsRoute = RouteProp<BottomTabParamList, 'Bookings'>;
+type BookingsRoute = RouteProp<BottomTabParamList, "Bookings">;
 
 export const BookingsScreen: React.FC = () => {
   const navigation = useNavigation<BookingsNav>();
@@ -41,16 +47,17 @@ export const BookingsScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<"card" | "table">("table");
 
   // Search
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Filter states
-  const [selectedHotel, setSelectedHotel] = useState<string>('');
-  const [selectedDriver, setSelectedDriver] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<BookingStatus | ''>('');
-  const [selectedSource, setSelectedSource] = useState<string>('');
-  const [selectedCustomer, setSelectedCustomer] = useState<string>('');
+  const [selectedHotel, setSelectedHotel] = useState<string>("");
+  const [selectedDriver, setSelectedDriver] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<BookingStatus | "">("");
+  const [selectedSource, setSelectedSource] = useState<string>("");
+  const [selectedCustomer, setSelectedCustomer] = useState<string>("");
 
   const loadBookings = useCallback(async () => {
     try {
@@ -59,7 +66,7 @@ export const BookingsScreen: React.FC = () => {
       setBookings(data);
       setFilteredBookings(data);
     } catch (error) {
-      console.error('Error loading bookings:', error);
+      console.error("Error loading bookings:", error);
     } finally {
       setIsLoading(false);
     }
@@ -78,18 +85,21 @@ export const BookingsScreen: React.FC = () => {
 
     const handleAdminFleetUpdate = (payload: any) => {
       const type = payload?.type;
-      
+
       if (type === "ride:create") {
         // New booking created - add to list
         const ride = payload?.ride;
         if (ride) {
           setBookings((prev) => {
             // Avoid duplicates
-            if (prev.some(b => b.id === ride.id || b.id === ride.bookingId)) {
+            if (prev.some((b) => b.id === ride.id || b.id === ride.bookingId)) {
               return prev;
             }
             // Prepend new booking
-            return [{ ...ride, id: ride.bookingId ?? ride.id } as Booking, ...prev];
+            return [
+              { ...ride, id: ride.bookingId ?? ride.id } as Booking,
+              ...prev,
+            ];
           });
         }
       } else if (type === "ride:update") {
@@ -100,9 +110,13 @@ export const BookingsScreen: React.FC = () => {
           setBookings((prev) =>
             prev.map((b) =>
               b.id === rideId
-                ? { ...b, status: ride.status, updatedAt: new Date().toISOString() }
-                : b
-            )
+                ? {
+                    ...b,
+                    status: ride.status,
+                    updatedAt: new Date().toISOString(),
+                  }
+                : b,
+            ),
           );
         }
       } else if (type === "ride:delete") {
@@ -134,7 +148,15 @@ export const BookingsScreen: React.FC = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [bookings, selectedHotel, selectedDriver, selectedStatus, selectedSource, selectedCustomer, searchQuery]);
+  }, [
+    bookings,
+    selectedHotel,
+    selectedDriver,
+    selectedStatus,
+    selectedSource,
+    selectedCustomer,
+    searchQuery,
+  ]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -180,7 +202,7 @@ export const BookingsScreen: React.FC = () => {
           b.hotelName,
         ]
           .filter(Boolean)
-          .join(' ')
+          .join(" ")
           .toLowerCase();
         return haystack.includes(query);
       });
@@ -190,71 +212,89 @@ export const BookingsScreen: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setSelectedHotel('');
-    setSelectedDriver('');
-    setSelectedStatus('');
-    setSelectedSource('');
-    setSelectedCustomer('');
-    setSearchQuery('');
+    setSelectedHotel("");
+    setSelectedDriver("");
+    setSelectedStatus("");
+    setSelectedSource("");
+    setSelectedCustomer("");
+    setSearchQuery("");
   };
 
   const handleAssignDriver = (booking: Booking) => {
-    navigation.navigate('AssignDriver', { bookingId: booking.id });
+    navigation.navigate("AssignDriver", { bookingId: booking.id });
   };
 
   const handleViewDetails = (booking: Booking) => {
-    navigation.navigate('BookingDetails', { bookingId: booking.id });
+    navigation.navigate("BookingDetails", { bookingId: booking.id });
   };
 
   // Generate filter options from bookings
   const hotelOptions = [
-    { label: 'All Hotels', value: '' },
-    ...Array.from(new Set(bookings.filter((b) => b.hotelName).map((b) => b.hotelName!)))
-      .map((hotel) => ({ label: hotel, value: hotel })),
+    { label: "All Hotels", value: "" },
+    ...Array.from(
+      new Set(bookings.filter((b) => b.hotelName).map((b) => b.hotelName!)),
+    ).map((hotel) => ({ label: hotel, value: hotel })),
   ];
 
   const driverOptions = [
-    { label: 'All Drivers', value: '' },
+    { label: "All Drivers", value: "" },
     ...Array.from(
       new Set(
         bookings
           .filter((b) => b.driver)
-          .map((b) => JSON.stringify({ id: b.driver!.id, name: b.driver!.name }))
-      )
+          .map((b) =>
+            JSON.stringify({ id: b.driver!.id, name: b.driver!.name }),
+          ),
+      ),
     )
       .map((str) => JSON.parse(str))
       .map((driver) => ({ label: driver.name, value: driver.id })),
   ];
 
   const statusOptions = [
-    { label: 'All Status', value: '' },
-    { label: 'Pending', value: BookingStatus.PENDING },
-    { label: 'Driver Assigned', value: BookingStatus.DRIVER_ASSIGNED },
-    { label: 'In Progress', value: BookingStatus.IN_PROGRESS },
-    { label: 'Completed', value: BookingStatus.COMPLETED },
-    { label: 'Cancelled', value: BookingStatus.CANCELLED },
+    { label: "All Status", value: "" },
+    { label: "Pending", value: BookingStatus.PENDING },
+    { label: "Driver Assigned", value: BookingStatus.DRIVER_ASSIGNED },
+    { label: "In Progress", value: BookingStatus.IN_PROGRESS },
+    { label: "Completed", value: BookingStatus.COMPLETED },
+    { label: "Cancelled", value: BookingStatus.CANCELLED },
   ];
 
   const sourceOptions = [
-    { label: 'All Sources', value: '' },
-    { label: 'Hotel', value: 'HOTEL' },
-    { label: 'Kiosk', value: 'KIOSK' },
-    { label: 'Customer App', value: 'CUSTOMER' },
+    { label: "All Sources", value: "" },
+    { label: "Hotel", value: "HOTEL" },
+    { label: "Kiosk", value: "KIOSK" },
+    { label: "Customer App", value: "CUSTOMER" },
   ];
 
   const customerOptions = [
-    { label: 'All Customers', value: '' },
-    ...Array.from(new Set(bookings.filter((b) => b.customerName).map((b) => b.customerName!)))
-      .map((customer) => ({ label: customer, value: customer })),
+    { label: "All Customers", value: "" },
+    ...Array.from(
+      new Set(
+        bookings.filter((b) => b.customerName).map((b) => b.customerName!),
+      ),
+    ).map((customer) => ({ label: customer, value: customer })),
   ];
 
-  const hasActiveFilters = selectedHotel || selectedDriver || selectedStatus || selectedSource || selectedCustomer;
+  const hasActiveFilters =
+    selectedHotel ||
+    selectedDriver ||
+    selectedStatus ||
+    selectedSource ||
+    selectedCustomer;
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? Colors.navy : '#F5F7FA' }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: isDark ? Colors.navy : "#F5F7FA" },
+      ]}
+    >
       {/* Modern Header */}
       <LinearGradient
-        colors={isDark ? [Colors.navy, Colors.navy + 'EE'] : [Colors.navy, '#1E3A5F']}
+        colors={
+          isDark ? [Colors.navy, Colors.navy + "EE"] : [Colors.navy, "#1E3A5F"]
+        }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top + 16 }]}
@@ -263,24 +303,50 @@ export const BookingsScreen: React.FC = () => {
           <View>
             <Text style={styles.headerTitle}>Bookings</Text>
             <Text style={styles.headerSubtitle}>
-              {filteredBookings.length} {filteredBookings.length === 1 ? 'ride' : 'rides'}
+              {filteredBookings.length}{" "}
+              {filteredBookings.length === 1 ? "ride" : "rides"}
             </Text>
           </View>
-          <TouchableOpacity
-            style={[styles.filterButton, showFilters && styles.filterButtonActive]}
-            onPress={() => setShowFilters(!showFilters)}
-          >
-            <Ionicons
-              name={showFilters ? 'close' : 'options-outline'}
-              size={22}
-              color={Colors.white}
-            />
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                viewMode === "table" && styles.filterButtonActive,
+              ]}
+              onPress={() =>
+                setViewMode(viewMode === "card" ? "table" : "card")
+              }
+            >
+              <Ionicons
+                name={viewMode === "table" ? "list" : "grid-outline"}
+                size={22}
+                color={Colors.white}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                showFilters && styles.filterButtonActive,
+              ]}
+              onPress={() => setShowFilters(!showFilters)}
+            >
+              <Ionicons
+                name={showFilters ? "close" : "options-outline"}
+                size={22}
+                color={Colors.white}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 
       {showFilters && (
-        <View style={[styles.filtersContainer, { backgroundColor: isDark ? Colors.navy + 'DD' : Colors.white }]}>
+        <View
+          style={[
+            styles.filtersContainer,
+            { backgroundColor: isDark ? Colors.navy + "DD" : Colors.white },
+          ]}
+        >
           <FilterDropdown
             label="Hotel"
             value={selectedHotel}
@@ -301,7 +367,7 @@ export const BookingsScreen: React.FC = () => {
             label="Status"
             value={selectedStatus}
             options={statusOptions}
-            onSelect={(value) => setSelectedStatus(value as BookingStatus | '')}
+            onSelect={(value) => setSelectedStatus(value as BookingStatus | "")}
             placeholder="All Status"
           />
 
@@ -330,22 +396,53 @@ export const BookingsScreen: React.FC = () => {
         </View>
       )}
 
-      <View style={[styles.searchHeader, { backgroundColor: isDark ? '#2A2A2A' : 'rgba(255,255,255,0.9)' }]}>
-        <View style={[styles.searchInputContainer, { backgroundColor: isDark ? '#1A1A1A' : Colors.white, borderColor: isDark ? 'rgba(255,255,255,0.15)' : Colors.borderLight }]}>
-          <Ionicons name="search" size={18} color={isDark ? Colors.ivory + '80' : Colors.navy + '80'} />
+      <View
+        style={[
+          styles.searchHeader,
+          { backgroundColor: isDark ? "#2A2A2A" : "rgba(255,255,255,0.9)" },
+        ]}
+      >
+        <View
+          style={[
+            styles.searchInputContainer,
+            {
+              backgroundColor: isDark ? "#1A1A1A" : Colors.white,
+              borderColor: isDark
+                ? "rgba(255,255,255,0.15)"
+                : Colors.borderLight,
+            },
+          ]}
+        >
+          <Ionicons
+            name="search"
+            size={18}
+            color={isDark ? Colors.ivory + "80" : Colors.navy + "80"}
+          />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Search bookings"
-            placeholderTextColor={isDark ? Colors.ivory + '66' : Colors.navy + '66'}
-            style={[styles.searchInput, { color: isDark ? Colors.ivory : Colors.navy }]}
+            placeholderTextColor={
+              isDark ? Colors.ivory + "66" : Colors.navy + "66"
+            }
+            style={[
+              styles.searchInput,
+              { color: isDark ? Colors.ivory : Colors.navy },
+            ]}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close-circle" size={18} color={isDark ? Colors.ivory + '80' : Colors.navy + '80'} />
+            <TouchableOpacity
+              onPress={() => setSearchQuery("")}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name="close-circle"
+                size={18}
+                color={isDark ? Colors.ivory + "80" : Colors.navy + "80"}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -356,32 +453,49 @@ export const BookingsScreen: React.FC = () => {
         )}
       </View>
 
-      <FlatList
-        data={filteredBookings}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <BookingCard
-            booking={item}
-            onAssignDriver={() => handleAssignDriver(item)}
-            onViewDetails={() => handleViewDetails(item)}
-          />
-        )}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={64} color={Colors.ivory} />
-            <Text style={styles.emptyText}>No bookings found</Text>
-            {hasActiveFilters && (
-              <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
-                <Text style={styles.clearFiltersText}>Clear Filters</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        }
-      />
+      {viewMode === "table" ? (
+        <BookingsTableView
+          bookings={filteredBookings}
+          onViewDetails={handleViewDetails}
+        />
+      ) : (
+        <FlatList
+          data={filteredBookings}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <BookingCard
+              booking={item}
+              onAssignDriver={() => handleAssignDriver(item)}
+              onViewDetails={() => handleViewDetails(item)}
+            />
+          )}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name="document-text-outline"
+                size={64}
+                color={Colors.ivory}
+              />
+              <Text style={styles.emptyText}>No bookings found</Text>
+              {hasActiveFilters && (
+                <TouchableOpacity
+                  style={styles.clearFiltersButton}
+                  onPress={clearFilters}
+                >
+                  <Text style={styles.clearFiltersText}>Clear Filters</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          }
+        />
+      )}
     </View>
   );
 };
@@ -397,29 +511,29 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: "800",
     color: Colors.white,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 14,
     color: Colors.gold,
-    fontWeight: '500',
+    fontWeight: "500",
     marginTop: 4,
   },
   filterButton: {
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: Colors.white + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: Colors.white + "15",
+    justifyContent: "center",
+    alignItems: "center",
   },
   filterButtonActive: {
     backgroundColor: Colors.gold,
@@ -437,33 +551,33 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     backgroundColor: Colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
   },
   clearButtonText: {
     color: Colors.white,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 8,
   },
   searchHeader: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: "rgba(255,255,255,0.9)",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 12,
   },
   searchInputContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.white,
     borderWidth: 1,
     borderColor: Colors.borderLight,
@@ -480,7 +594,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   filterBadge: {
-    backgroundColor: Colors.primary + '20',
+    backgroundColor: Colors.primary + "20",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -488,7 +602,7 @@ const styles = StyleSheet.create({
   filterBadgeText: {
     fontSize: 12,
     color: Colors.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   listContent: {
     padding: 16,
@@ -496,8 +610,8 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 60,
   },
   emptyText: {
@@ -514,6 +628,6 @@ const styles = StyleSheet.create({
   },
   clearFiltersText: {
     color: Colors.white,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
