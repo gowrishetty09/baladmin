@@ -11,7 +11,7 @@
 import { io, type Socket } from 'socket.io-client';
 
 const API_BASE_URL =
-    process.env.EXPO_PUBLIC_API_BASE_URL || 'https://bestaerolimo.online/api';
+    process.env.EXPO_PUBLIC_API_BASE_URL || 'https://bestaerolimo.com/api';
 
 const getSocketBaseUrl = (): string => {
     const base = API_BASE_URL.replace(/\/+$/, '');

@@ -1,1 +1,47 @@
-﻿{"name":"Bal-Adminapp","slug":"bal-admin","version":"1.0.0","orientation":"portrait","icon":"./assets/icon.png","userInterfaceStyle":"light","newArchEnabled":true,"notification":{"icon":"./assets/notifiy-icon.png","color":"#2563eb"},"splash":{"image":"./assets/splash-icon.png","resizeMode":"contain","backgroundColor":"#ffffff"},"ios":{"supportsTablet":true,"bundleIdentifier":"com.bal.adminapp"},"android":{"adaptiveIcon":{"foregroundImage":"./assets/adaptive-icon.png","backgroundColor":"#ffffff"},"edgeToEdgeEnabled":true,"predictiveBackGestureEnabled":false,"package":"com.bal.admin","versionCode":1,"googleServicesFile":"./google-services.json"},"web":{"favicon":"./assets/favicon.png"},"plugins":[["expo-notifications",{"color":"#2563eb"}],"expo-secure-store",["react-native-maps",{"androidGoogleMapsApiKey":"AIzaSyDRN3_J4mGdkmWifoACmHBfT68sIvD3kQ8"}]],"extra":{"eas":{"projectId":"7a0b27b5-a719-45b0-ae7c-68da67ac0c41","apiBaseUrl":"https://bestaerolimo.online/api"},"apiBaseUrl":"https://bestaerolimo.online/api","googleMapsApiKey":"AIzaSyDRN3_J4mGdkmWifoACmHBfT68sIvD3kQ8"},"owner":"pranas9s-organization","sdkVersion":"54.0.0","platforms":["ios","android","web"]}
+﻿{
+  "name": "Bal-Adminapp",
+  "slug": "bal-admin",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "icon": "./assets/icon.png",
+  "userInterfaceStyle": "light",
+  "newArchEnabled": true,
+  "notification": { "icon": "./assets/notifiy-icon.png", "color": "#2563eb" },
+  "splash": {
+    "image": "./assets/splash-icon.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#ffffff"
+  },
+  "ios": { "supportsTablet": true, "bundleIdentifier": "com.bal.adminapp" },
+  "android": {
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
+      "backgroundColor": "#ffffff"
+    },
+    "edgeToEdgeEnabled": true,
+    "predictiveBackGestureEnabled": false,
+    "package": "com.bal.admin",
+    "versionCode": 1,
+    "googleServicesFile": "./google-services.json"
+  },
+  "web": { "favicon": "./assets/favicon.png" },
+  "plugins": [
+    ["expo-notifications", { "color": "#2563eb" }],
+    "expo-secure-store",
+    [
+      "react-native-maps",
+      { "androidGoogleMapsApiKey": "AIzaSyDRN3_J4mGdkmWifoACmHBfT68sIvD3kQ8" }
+    ]
+  ],
+  "extra": {
+    "eas": {
+      "projectId": "7a0b27b5-a719-45b0-ae7c-68da67ac0c41",
+      "apiBaseUrl": "https://bestaerolimo.com/api"
+    },
+    "apiBaseUrl": "https://bestaerolimo.com/api",
+    "googleMapsApiKey": "AIzaSyDRN3_J4mGdkmWifoACmHBfT68sIvD3kQ8"
+  },
+  "owner": "pranas9s-organization",
+  "sdkVersion": "54.0.0",
+  "platforms": ["ios", "android", "web"]
+}

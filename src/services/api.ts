@@ -15,7 +15,7 @@ import {
 } from '../types';
 
 // Get base URL from environment or use default
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://bestaerolimo.online/api';
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://bestaerolimo.com/api';
 
 const http = axios.create({
   baseURL: BASE_URL,

@@ -96,9 +96,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     extra: {
         eas: {
             projectId: '7a0b27b5-a719-45b0-ae7c-68da67ac0c41',
-            apiBaseUrl: 'https://bestaerolimo.online/api',
+            apiBaseUrl: 'https://bestaerolimo.com/api',
         },
-        apiBaseUrl: 'https://bestaerolimo.online/api',
+        apiBaseUrl: 'https://bestaerolimo.com/api',
         googleMapsApiKey: androidMapsApiKey ?? (config as any)?.android?.config?.googleMaps?.apiKey ?? null,
     },
     owner: 'pranas9s-organization',
