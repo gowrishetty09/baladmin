@@ -288,10 +288,13 @@ export const BookingsTableView: React.FC<BookingsTableViewProps> = ({
     <View style={styles.container}>
       {/* Summary bar */}
       <View style={styles.summaryBar}>
-        <Text style={styles.summaryText}>
-          Total: <Text style={{ fontWeight: "700" }}>{bookings.length}</Text>{" "}
-          bookings
-        </Text>
+        <View>
+          <Text style={styles.summaryText}>
+            Total: <Text style={{ fontWeight: "700" }}>{bookings.length}</Text>{" "}
+            bookings
+          </Text>
+          <Text style={styles.scrollHint}>← Scroll horizontally to view all columns →</Text>
+        </View>
         <View style={styles.legendRow}>
           <View style={[styles.legendDot, { backgroundColor: "#FFF3E0" }]} />
           <Text style={styles.legendLabel}>DP</Text>
@@ -301,11 +304,15 @@ export const BookingsTableView: React.FC<BookingsTableViewProps> = ({
       </View>
 
       {/* Horizontal scrollable table */}
-      <ScrollView horizontal showsHorizontalScrollIndicator>
-        <View style={{ width: Math.max(TOTAL_ROW_WIDTH, SCREEN_WIDTH) }}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={true}
+        persistentScrollbar={true}
+      >
+        <View style={{ width: TOTAL_ROW_WIDTH }}>
           {renderHeader()}
           <ScrollView
-            showsVerticalScrollIndicator
+            showsVerticalScrollIndicator={true}
             contentContainerStyle={{ paddingBottom: 80 }}
           >
             {rows.length === 0 ? (
@@ -341,6 +348,12 @@ const styles = StyleSheet.create({
   summaryText: {
     fontSize: 13,
     color: "#333",
+  },
+  scrollHint: {
+    fontSize: 10,
+    color: "#666",
+    fontStyle: "italic",
+    marginTop: 2,
   },
   legendRow: {
     flexDirection: "row",

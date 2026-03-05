@@ -15,13 +15,14 @@ type AssignProps = NativeStackScreenProps<RootStackParamList, 'AssignDriver'>;
 export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
   const navigation = useNavigation<AssignNav>();
   const { isDark } = useThemeContext();
-  const bookingId = route.params.bookingId;
-  const isReassign = route.params.isReassign ?? false;
-  const vehicleCategoryId = route.params.vehicleCategoryId;
+  const bookingId = route?.params?.bookingId ?? '';
+  const isReassign = route?.params?.isReassign ?? false;
+  const vehicleCategoryId = route?.params?.vehicleCategoryId;
 
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     navigation.setOptions({
@@ -31,20 +32,28 @@ export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
 
   useEffect(() => {
     const load = async () => {
+      if (!bookingId) {
+        setLoadError('Missing booking details. Please open the ride and try again.');
+        setLoading(false);
+        return;
+      }
+
       try {
         // Filter drivers by vehicle category if provided
         const data = await ApiService.getAvailableDrivers(
           vehicleCategoryId ? { vehicleCategoryId } : undefined
         );
         setDrivers(data);
+        setLoadError(null);
       } catch (e) {
         console.error('Error loading available drivers:', e);
+        setLoadError('Unable to load available drivers. Please try again.');
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [vehicleCategoryId]);
+  }, [bookingId, vehicleCategoryId]);
 
   const assign = async (driver: Driver) => {
     try {
@@ -66,6 +75,17 @@ export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
     return (
       <GradientBackground style={styles.center}>
         <ActivityIndicator color={Colors.gold} />
+      </GradientBackground>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <GradientBackground style={styles.center}>
+        <Text style={[styles.errorText, { color: isDark ? Colors.ivory : Colors.navy }]}>{loadError}</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>Go Back</Text>
+        </TouchableOpacity>
       </GradientBackground>
     );
   }
@@ -101,7 +121,7 @@ export const AssignDriverScreen: React.FC<AssignProps> = ({ route }) => {
         )}
         ListEmptyComponent={
           <View style={styles.center}> 
-            <Text style={styles.subtle}>No available drivers.</Text>
+            <Text style={[styles.subtle, { color: isDark ? Colors.ivory + 'B3' : Colors.navy + 'B3' }]}>No available drivers.</Text>
           </View>
         }
         ListFooterComponent={<View style={{ height: 40 }} />}
@@ -124,6 +144,22 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 16, fontWeight: '700', color: Colors.navy, marginBottom: 4 },
   subtle: { color: Colors.navy + '80' },
+  errorText: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 14,
+    paddingHorizontal: 20,
+  },
+  backButton: {
+    backgroundColor: Colors.gold,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: Colors.white,
+    fontWeight: '700',
+  },
   assignButton: { backgroundColor: Colors.gold, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6 },
   assignText: { color: Colors.white, fontWeight: '700', marginLeft: 6 },
 });

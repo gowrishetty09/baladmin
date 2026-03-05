@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BookingCard } from "../components/BookingCard";
 import { BookingsTableView } from "../components/BookingsTableView";
 import { FilterDropdown } from "../components/FilterDropdown";
+import { DateCarousel } from "../components/DateCarousel";
 import {
   Booking,
   BookingStatus,
@@ -47,7 +48,17 @@ export const BookingsScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<"card" | "table">("table");
+  const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  
+  // Date filter - default to today
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDate());
 
   // Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -156,6 +167,7 @@ export const BookingsScreen: React.FC = () => {
     selectedSource,
     selectedCustomer,
     searchQuery,
+    selectedDate,
   ]);
 
   const handleRefresh = async () => {
@@ -166,6 +178,15 @@ export const BookingsScreen: React.FC = () => {
 
   const applyFilters = () => {
     let filtered = [...bookings];
+
+    // Filter by selected date
+    if (selectedDate) {
+      filtered = filtered.filter((b) => {
+        const bookingDate = new Date(b.scheduledTime || b.createdAt);
+        const dateStr = `${bookingDate.getFullYear()}-${String(bookingDate.getMonth() + 1).padStart(2, "0")}-${String(bookingDate.getDate()).padStart(2, "0")}`;
+        return dateStr === selectedDate;
+      });
+    }
 
     if (selectedHotel) {
       filtered = filtered.filter((b) => b.hotelName === selectedHotel);
@@ -218,10 +239,14 @@ export const BookingsScreen: React.FC = () => {
     setSelectedSource("");
     setSelectedCustomer("");
     setSearchQuery("");
+    setSelectedDate(getTodayDate());
   };
 
   const handleAssignDriver = (booking: Booking) => {
-    navigation.navigate("AssignDriver", { bookingId: booking.id });
+    navigation.navigate("AssignDriver", {
+      bookingId: booking.id,
+      vehicleCategoryId: (booking as any).vehicleCategoryId ?? undefined,
+    });
   };
 
   const handleViewDetails = (booking: Booking) => {
@@ -395,6 +420,12 @@ export const BookingsScreen: React.FC = () => {
           )}
         </View>
       )}
+
+      {/* Date Carousel */}
+      <DateCarousel
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
+      />
 
       <View
         style={[
