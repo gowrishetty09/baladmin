@@ -5,6 +5,7 @@ import {
   BookingStatus,
   BookingSource,
   VehicleCategory,
+  UpdateBookingDetailsPayload,
   DashboardSummary,
   Notification,
   NotificationType,
@@ -126,6 +127,8 @@ const normalizeBooking = (raw: any): Booking => {
     hotelName: raw?.hotelName ?? raw?.hotel?.name ?? undefined,
     kioskLocation: raw?.kioskLocation ?? undefined,
     fare: Number.isFinite(fare) ? fare : undefined,
+    paymentMethod: raw?.paymentMethod ?? undefined,
+    bookingCategory: raw?.bookingCategory ?? undefined,
     // Timing fields
     pickupTime: raw?.pickupTime ?? undefined,
     dropTime: raw?.dropTime ?? undefined,
@@ -134,7 +137,7 @@ const normalizeBooking = (raw: any): Booking => {
     rideStartedAt: raw?.rideStartedAt ?? undefined,
     completedAt: raw?.completedAt ?? undefined,
     // Flight info
-    flightNumber: raw?.flightNumber ?? undefined,
+    flightNumber: raw?.flightNumber ?? raw?.flightNo ?? undefined,
     flightEta: raw?.flightEta ?? undefined,
     // Hotel/Kiosk specific
     hotelId: raw?.hotelId ?? undefined,
@@ -417,6 +420,19 @@ class ApiService {
     }
   }
 
+  async updateBookingDetails(
+    bookingId: string,
+    payload: UpdateBookingDetailsPayload,
+  ): Promise<Booking> {
+    try {
+      const response = await this.api.patch(`/bookings/${bookingId}/details`, payload);
+      return normalizeBooking(response.data);
+    } catch (error) {
+      console.error('Error updating booking details:', error);
+      throw error;
+    }
+  }
+
   // Notifications
   async getNotifications(limit: number = 50, offset: number = 0): Promise<Notification[]> {
     try {
@@ -485,6 +501,92 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('Error reassigning driver:', error);
+      throw error;
+    }
+  }
+
+  // Vehicle categories (used by Change Car flow)
+  async getVehicleCategories(): Promise<Array<{
+    id: string;
+    name: string;
+    serviceTier?: string | null;
+    seats?: number | null;
+    description?: string | null;
+  }>> {
+    try {
+      const response = await this.api.get('/vehicle-categories');
+      const raw = response.data;
+      const items = Array.isArray(raw) ? raw : raw?.items ?? raw?.data ?? [];
+      return items.map((c: any) => ({
+        id: String(c?.id ?? ''),
+        name: String(c?.name ?? ''),
+        serviceTier: c?.serviceTier ?? null,
+        seats: typeof c?.seats === 'number' ? c.seats : null,
+        description: c?.description ?? null,
+      }));
+    } catch (error) {
+      console.error('Error fetching vehicle categories:', error);
+      throw error;
+    }
+  }
+
+  async updateBookingVehicleCategory(
+    bookingId: string,
+    payload: { vehicleCategoryId: string; price?: number; currency?: string }
+  ): Promise<Booking> {
+    try {
+      const body: Record<string, unknown> = {
+        vehicleCategoryId: payload.vehicleCategoryId,
+      };
+      if (typeof payload.price === 'number' && Number.isFinite(payload.price)) {
+        body.price = payload.price;
+      }
+      if (payload.currency) {
+        body.currency = payload.currency;
+      }
+      const response = await this.api.patch(
+        `/bookings/${bookingId}/vehicle-category`,
+        body
+      );
+      return normalizeBooking(response.data);
+    } catch (error) {
+      console.error('Error updating booking vehicle category:', error);
+      throw error;
+    }
+  }
+
+  // Vehicles
+  async getVehicles(options?: {
+    categoryId?: string;
+    status?: string;
+    hotelId?: string;
+    limit?: number;
+  }): Promise<any[]> {
+    try {
+      const params: Record<string, string | number> = {
+        limit: options?.limit ?? 200,
+      };
+      if (options?.categoryId) params.categoryId = options.categoryId;
+      if (options?.status) params.status = options.status;
+      if (options?.hotelId) params.hotelId = options.hotelId;
+      const response = await this.api.get('/vehicles', { params });
+      const raw = response.data;
+      const items = Array.isArray(raw) ? raw : raw?.items ?? raw?.data ?? [];
+      return items;
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+      throw error;
+    }
+  }
+
+  async assignVehicleToDriver(driverId: string, vehicleId: string | null): Promise<any> {
+    try {
+      const response = await this.api.patch(`/drivers/${driverId}/assign-vehicle`, {
+        vehicleId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error assigning vehicle to driver:', error);
       throw error;
     }
   }

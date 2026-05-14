@@ -9,6 +9,11 @@ import {
 } from "react-native";
 import { Booking, BookingStatus } from "../types";
 import { Colors } from "../constants/colors";
+import {
+  buildCrewGuestColorMap,
+  formatBookingPaymentMethod,
+  getCrewBookingRowColor,
+} from "../utils/crewBookingColors";
 
 // ── helpers ──────────────────────────────────────────────────
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -111,6 +116,7 @@ const COLUMNS: Column[] = [
   { key: "no", label: "No", width: 36, align: "center" },
   { key: "date", label: "Date", width: 80, align: "center" },
   { key: "type", label: "Type", width: 40, align: "center" },
+  { key: "payment", label: "Payment", width: 80, align: "center" },
   { key: "guest", label: "Guest Name", width: 180, align: "left" },
   { key: "from", label: "From", width: 90, align: "center" },
   { key: "to", label: "To", width: 90, align: "center" },
@@ -130,6 +136,7 @@ interface RowData {
   no: number;
   date: string;
   type: "DP" | "AR";
+  payment: string;
   guest: string;
   from: string;
   to: string;
@@ -147,6 +154,7 @@ const buildRow = (b: Booking, idx: number): RowData => ({
   no: idx + 1,
   date: fmtDate(b.scheduledTime || b.createdAt),
   type: getTransferType(b),
+  payment: formatBookingPaymentMethod(b),
   guest: b.guestName || b.customerName || "—",
   from: abbreviateLocation(b.pickup?.address ?? ""),
   to: abbreviateLocation(b.drop?.address ?? ""),
@@ -185,6 +193,10 @@ export const BookingsTableView: React.FC<BookingsTableViewProps> = ({
 }) => {
   const rows: RowData[] = useMemo(
     () => bookings.map((b, i) => buildRow(b, i)),
+    [bookings],
+  );
+  const crewGuestColorMap = useMemo(
+    () => buildCrewGuestColorMap(bookings),
     [bookings],
   );
 
@@ -239,6 +251,11 @@ export const BookingsTableView: React.FC<BookingsTableViewProps> = ({
       fontWeight = "600";
     }
 
+    if (col.key === "payment" && text !== "—") {
+      fontWeight = "600";
+      if (text.toUpperCase() === "CREW") textColor = "#1D4ED8";
+    }
+
     return (
       <View
         key={col.key}
@@ -264,7 +281,8 @@ export const BookingsTableView: React.FC<BookingsTableViewProps> = ({
 
   /* ── Data row ───────────────────────────────────── */
   const renderRow = (row: RowData) => {
-    const rowTint = getRowTint(row.booking);
+    const crewTint = getCrewBookingRowColor(row.booking, crewGuestColorMap);
+    const rowTint = crewTint ?? getRowTint(row.booking);
     const isEven = row.no % 2 === 0;
 
     return (

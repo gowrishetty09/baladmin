@@ -19,9 +19,9 @@ const formatTime = (dateStr: string) => {
     return date.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: true,
+      hour12: false,
     });
   } catch {
     return dateStr;
@@ -32,12 +32,14 @@ interface BookingCardProps {
   booking: Booking;
   onAssignDriver: () => void;
   onViewDetails: () => void;
+  crewRowColor?: string;
 }
 
 export const BookingCard: React.FC<BookingCardProps> = ({
   booking,
   onAssignDriver,
   onViewDetails,
+  crewRowColor,
 }) => {
   const { isDark } = useThemeContext();
   const pan = useRef(new Animated.ValueXY()).current;
@@ -101,6 +103,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   };
 
   const statusColor = getStatusColor(booking.status);
+  const cardBackgroundColor = crewRowColor ?? (isDark ? '#2A2A2A' : Colors.white);
 
   return (
     <Animated.View
@@ -113,7 +116,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
       {...panResponder.panHandlers}
     >
       <TouchableOpacity
-        style={[styles.card, { borderLeftColor: statusColor, backgroundColor: isDark ? '#2A2A2A' : Colors.white }]}
+        style={[styles.card, { borderLeftColor: statusColor, backgroundColor: cardBackgroundColor }]}
         onPress={onViewDetails}
         activeOpacity={0.9}
       >

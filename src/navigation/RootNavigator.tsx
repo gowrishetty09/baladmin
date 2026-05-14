@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MainTabs } from './MainTabs';
 import { BookingDetailsScreen } from '../screens/BookingDetailsScreen';
 import { AssignDriverScreen } from '../screens/AssignDriverScreen';
+import { ChangeCarScreen } from '../screens/ChangeCarScreen';
 import LoginScreen from '../screens/LoginScreen';
 import { RootStackParamList } from '../types';
 import { useAuthContext } from '../hooks/useAuthStore';
@@ -50,6 +51,14 @@ export const RootNavigator: React.FC = () => {
             component={AssignDriverScreen}
             options={{
               title: 'Assign Driver',
+              presentation: 'modal',
+            }}
+          />
+          <Stack.Screen
+            name="ChangeCar"
+            component={ChangeCarScreen}
+            options={{
+              title: 'Change Car',
               presentation: 'modal',
             }}
           />

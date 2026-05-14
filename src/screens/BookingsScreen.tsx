@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -30,12 +30,30 @@ import ApiService from "../services/api";
 import { useThemeContext } from "../hooks/ThemeContext";
 import useAuth from "../hooks/useAuth";
 import { getAdminSocket } from "../services/adminSocket";
+import {
+  buildCrewGuestColorMap,
+  getCrewBookingRowColor,
+} from "../utils/crewBookingColors";
 
 type BookingsNav = CompositeNavigationProp<
   BottomTabNavigationProp<BottomTabParamList, "Bookings">,
   NativeStackNavigationProp<RootStackParamList>
 >;
 type BookingsRoute = RouteProp<BottomTabParamList, "Bookings">;
+
+const getPickupTimeSortValue = (booking: Booking): number => {
+  const pickupTime = booking.pickupTime || booking.scheduledTime || booking.createdAt;
+  if (!pickupTime) return Number.MAX_SAFE_INTEGER;
+  const value = new Date(pickupTime).getTime();
+  return Number.isNaN(value) ? Number.MAX_SAFE_INTEGER : value;
+};
+
+const sortByPickupTimeAsc = (items: Booking[]): Booking[] =>
+  [...items].sort((left, right) => {
+    const pickupDiff = getPickupTimeSortValue(left) - getPickupTimeSortValue(right);
+    if (pickupDiff !== 0) return pickupDiff;
+    return String(left.id ?? "").localeCompare(String(right.id ?? ""));
+  });
 
 export const BookingsScreen: React.FC = () => {
   const navigation = useNavigation<BookingsNav>();
@@ -49,6 +67,10 @@ export const BookingsScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  const crewGuestColorMap = useMemo(
+    () => buildCrewGuestColorMap(filteredBookings),
+    [filteredBookings],
+  );
   
   // Date filter - default to today
   const getTodayDate = () => {
@@ -74,8 +96,9 @@ export const BookingsScreen: React.FC = () => {
     try {
       setIsLoading(true);
       const data = await ApiService.getBookings();
-      setBookings(data);
-      setFilteredBookings(data);
+      const sortedData = sortByPickupTimeAsc(data);
+      setBookings(sortedData);
+      setFilteredBookings(sortedData);
     } catch (error) {
       console.error("Error loading bookings:", error);
     } finally {
@@ -106,11 +129,10 @@ export const BookingsScreen: React.FC = () => {
             if (prev.some((b) => b.id === ride.id || b.id === ride.bookingId)) {
               return prev;
             }
-            // Prepend new booking
-            return [
-              { ...ride, id: ride.bookingId ?? ride.id } as Booking,
+            return sortByPickupTimeAsc([
               ...prev,
-            ];
+              { ...ride, id: ride.bookingId ?? ride.id } as Booking,
+            ]);
           });
         }
       } else if (type === "ride:update") {
@@ -119,14 +141,16 @@ export const BookingsScreen: React.FC = () => {
         const rideId = ride?.bookingId ?? ride?.id;
         if (ride && rideId) {
           setBookings((prev) =>
-            prev.map((b) =>
-              b.id === rideId
-                ? {
-                    ...b,
-                    status: ride.status,
-                    updatedAt: new Date().toISOString(),
-                  }
-                : b,
+            sortByPickupTimeAsc(
+              prev.map((booking) =>
+                booking.id === rideId
+                  ? {
+                      ...booking,
+                      status: ride.status,
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : booking,
+              ),
             ),
           );
         }
@@ -153,7 +177,7 @@ export const BookingsScreen: React.FC = () => {
     }
     if (params?.filterSOS) {
       const sosBookings = bookings.filter((b) => b.hasSOS);
-      setFilteredBookings(sosBookings);
+      setFilteredBookings(sortByPickupTimeAsc(sosBookings));
     }
   }, [route.params, bookings]);
 
@@ -229,7 +253,7 @@ export const BookingsScreen: React.FC = () => {
       });
     }
 
-    setFilteredBookings(filtered);
+    setFilteredBookings(sortByPickupTimeAsc(filtered));
   };
 
   const clearFilters = () => {
@@ -498,6 +522,7 @@ export const BookingsScreen: React.FC = () => {
               booking={item}
               onAssignDriver={() => handleAssignDriver(item)}
               onViewDetails={() => handleViewDetails(item)}
+              crewRowColor={getCrewBookingRowColor(item, crewGuestColorMap)}
             />
           )}
           contentContainerStyle={styles.listContent}

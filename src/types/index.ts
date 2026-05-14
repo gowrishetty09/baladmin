@@ -66,6 +66,8 @@ export interface Booking {
   hotelName?: string;
   kioskLocation?: string;
   fare?: number;
+  paymentMethod?: string;
+  bookingCategory?: string;
   // Timing fields
   pickupTime?: string;
   dropTime?: string;
@@ -97,6 +99,25 @@ export interface Booking {
   // Ride type
   rideType?: 'ONE_WAY' | 'ROUND_TRIP' | 'HOURLY' | 'DAILY' | 'AIRPORT' | 'TOUR';
   tourPackageId?: string;
+}
+
+export interface UpdateBookingDetailsPayload {
+  guestName?: string;
+  guestPhone?: string;
+  guestEmail?: string;
+  pickupLocation?: string;
+  dropLocation?: string;
+  pickupTime?: string;
+  dropTime?: string;
+  flightNo?: string;
+  flightEta?: string;
+  notes?: string;
+  passengers?: number;
+  children?: number;
+  bags?: number;
+  durationHours?: number;
+  paymentMethod?: string | null;
+  bookingCategory?: string | null;
 }
 
 // Expenses
@@ -178,6 +199,12 @@ export type RootStackParamList = {
   MainTabs: undefined;
   BookingDetails: { bookingId: string };
   AssignDriver: { bookingId: string; isReassign?: boolean; vehicleCategoryId?: string };
+  ChangeCar: {
+    bookingId: string;
+    currentVehicleCategoryId?: string;
+    currentPrice?: number;
+    currentCurrency?: string;
+  };
 };
 
 export type BottomTabParamList = {

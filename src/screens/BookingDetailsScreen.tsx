@@ -7,7 +7,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Linking,
+  TextInput,
+  Alert,
+  Platform,
 } from "react-native";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import {
   NativeStackScreenProps,
@@ -15,7 +19,7 @@ import {
 } from "@react-navigation/native-stack";
 import { Colors } from "../constants/colors";
 import ApiService from "../services/api";
-import { Booking, RootStackParamList } from "../types";
+import { Booking, RootStackParamList, UpdateBookingDetailsPayload } from "../types";
 import { Ionicons } from "@expo/vector-icons";
 import { GradientBackground } from "../components/GradientBackground";
 import { useThemeContext } from "../hooks/ThemeContext";
@@ -31,9 +35,9 @@ const formatDateTime = (dateStr?: string) => {
       month: "short",
       day: "numeric",
       year: "numeric",
-      hour: "numeric",
+      hour: "2-digit",
       minute: "2-digit",
-      hour12: true,
+      hour12: false,
     });
   } catch {
     return dateStr;
@@ -46,9 +50,9 @@ const formatTime = (dateStr?: string) => {
   try {
     const date = new Date(dateStr);
     return date.toLocaleString("en-US", {
-      hour: "numeric",
+      hour: "2-digit",
       minute: "2-digit",
-      hour12: true,
+      hour12: false,
     });
   } catch {
     return dateStr;
@@ -104,6 +108,87 @@ export const BookingDetailsScreen: React.FC<DetailsProps> = ({ route }) => {
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"date" | "time">("date");
+  const [pickerField, setPickerField] = useState<"pickupTime" | "dropTime" | "flightEta" | null>(null);
+  const [pickerDraftDate, setPickerDraftDate] = useState<Date>(new Date());
+  const [editValues, setEditValues] = useState({
+    guestName: "",
+    guestPhone: "",
+    guestEmail: "",
+    pickupLocation: "",
+    dropLocation: "",
+    pickupTime: "",
+    dropTime: "",
+    flightNo: "",
+    flightEta: "",
+    notes: "",
+    passengers: "",
+    children: "",
+    bags: "",
+    durationHours: "",
+  });
+
+  const asText = (value: unknown) => (value == null ? "" : String(value));
+
+  const openDateTimePicker = useCallback(
+    (field: "pickupTime" | "dropTime" | "flightEta") => {
+      const currentRaw = editValues[field];
+      const parsed = currentRaw ? new Date(currentRaw) : null;
+      const safeDate = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date();
+      setPickerField(field);
+      setPickerDraftDate(safeDate);
+      setPickerMode("date");
+      setPickerVisible(true);
+    },
+    [editValues],
+  );
+
+  const clearDateField = useCallback((field: "pickupTime" | "dropTime" | "flightEta") => {
+    setEditValues((prev) => ({ ...prev, [field]: "" }));
+  }, []);
+
+  const onDateTimeChange = useCallback(
+    (event: DateTimePickerEvent, selectedDate?: Date) => {
+      if (event.type === "dismissed") {
+        setPickerVisible(false);
+        setPickerField(null);
+        setPickerMode("date");
+        return;
+      }
+
+      if (!selectedDate) return;
+
+      if (pickerMode === "date") {
+        const nextDraft = new Date(pickerDraftDate);
+        nextDraft.setFullYear(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          selectedDate.getDate(),
+        );
+        setPickerDraftDate(nextDraft);
+        setPickerMode("time");
+        return;
+      }
+
+      const finalDate = new Date(pickerDraftDate);
+      finalDate.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+
+      if (pickerField) {
+        setEditValues((prev) => ({
+          ...prev,
+          [pickerField]: finalDate.toISOString(),
+        }));
+      }
+
+      setPickerVisible(false);
+      setPickerField(null);
+      setPickerMode("date");
+    },
+    [pickerDraftDate, pickerField, pickerMode],
+  );
 
   const loadBooking = useCallback(async () => {
     try {
@@ -192,6 +277,97 @@ export const BookingDetailsScreen: React.FC<DetailsProps> = ({ route }) => {
       socket.off("ride:ended", handleStatusUpdate);
     };
   }, [bookingId, isAuthenticated, token, loadBooking]);
+
+  const openEditDetails = useCallback(() => {
+    if (!booking) return;
+    setEditValues({
+      guestName: asText(booking.guestName ?? booking.customerName),
+      guestPhone: asText(booking.guestPhone ?? booking.customerPhone),
+      guestEmail: asText(booking.guestEmail ?? booking.customerEmail),
+      pickupLocation: asText(booking.pickup?.address),
+      dropLocation: asText(booking.drop?.address),
+      pickupTime: asText((booking as any).pickupTime ?? booking.scheduledTime),
+      dropTime: asText((booking as any).dropTime),
+      flightNo: asText((booking as any).flightNumber ?? (booking as any).flightNo),
+      flightEta: asText((booking as any).flightEta),
+      notes: asText((booking as any).notes),
+      passengers: asText((booking as any).passengers),
+      children: asText((booking as any).children),
+      bags: asText((booking as any).bags),
+      durationHours: asText((booking as any).durationHours),
+    });
+    setIsEditMode(true);
+  }, [booking]);
+
+  const parseOptionalNumber = (value: string): number | undefined => {
+    if (!value.trim()) return undefined;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return undefined;
+    return parsed;
+  };
+
+  const handleSaveDetails = useCallback(async () => {
+    if (!booking) return;
+
+    const pickupLocation = editValues.pickupLocation.trim();
+    const dropLocation = editValues.dropLocation.trim();
+
+    if (!pickupLocation || !dropLocation) {
+      Alert.alert("Validation", "Pickup and drop location are required.");
+      return;
+    }
+
+    const pickupTime = editValues.pickupTime.trim();
+    if (pickupTime && Number.isNaN(new Date(pickupTime).getTime())) {
+      Alert.alert("Validation", "Pickup time must be a valid date-time.");
+      return;
+    }
+
+    const dropTime = editValues.dropTime.trim();
+    if (dropTime && Number.isNaN(new Date(dropTime).getTime())) {
+      Alert.alert("Validation", "Drop time must be a valid date-time.");
+      return;
+    }
+
+    const flightEta = editValues.flightEta.trim();
+    if (flightEta && Number.isNaN(new Date(flightEta).getTime())) {
+      Alert.alert("Validation", "Flight ETA must be a valid date-time.");
+      return;
+    }
+
+    const payload: UpdateBookingDetailsPayload = {
+      guestName: editValues.guestName,
+      guestPhone: editValues.guestPhone,
+      guestEmail: editValues.guestEmail,
+      pickupLocation,
+      dropLocation,
+      pickupTime: pickupTime || undefined,
+      dropTime: dropTime || undefined,
+      flightNo: editValues.flightNo,
+      flightEta: flightEta || undefined,
+      notes: editValues.notes,
+      passengers: parseOptionalNumber(editValues.passengers),
+      children: parseOptionalNumber(editValues.children),
+      bags: parseOptionalNumber(editValues.bags),
+      durationHours: parseOptionalNumber(editValues.durationHours),
+    };
+
+    try {
+      setIsSavingDetails(true);
+      const updated = await ApiService.updateBookingDetails(booking.id, payload);
+      setBooking(updated);
+      setIsEditMode(false);
+      Alert.alert("Success", "Booking details updated.");
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.message;
+      const message = Array.isArray(backendMessage)
+        ? backendMessage.join(", ")
+        : backendMessage || "Failed to update booking details.";
+      Alert.alert("Update failed", String(message));
+    } finally {
+      setIsSavingDetails(false);
+    }
+  }, [booking, editValues]);
 
   if (loading) {
     return (
@@ -574,6 +750,242 @@ export const BookingDetailsScreen: React.FC<DetailsProps> = ({ route }) => {
         </View>
 
         {/* Action Buttons */}
+        <TouchableOpacity
+          style={[styles.primaryButton, { backgroundColor: isEditMode ? Colors.navy : "#2563EB" }]}
+          onPress={() => {
+            if (isEditMode) {
+              setIsEditMode(false);
+              return;
+            }
+            openEditDetails();
+          }}
+        >
+          <Ionicons name={isEditMode ? "close" : "create-outline"} color={Colors.white} size={18} />
+          <Text style={styles.primaryButtonText}>{isEditMode ? "Cancel Editing" : "Edit Details"}</Text>
+        </TouchableOpacity>
+
+        {isEditMode && (
+          <View
+            style={[
+              styles.card,
+              styles.editCard,
+              { backgroundColor: isDark ? "#2A2A2A" : "rgba(255,255,255,0.95)" },
+            ]}
+          >
+            <Text style={[styles.sectionTitle, { color: isDark ? Colors.ivory : Colors.navy }]}>Update Booking Details</Text>
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Guest Name</Text>
+            <TextInput
+              value={editValues.guestName}
+              onChangeText={(text) => setEditValues((prev) => ({ ...prev, guestName: text }))}
+              style={[styles.input, { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" }]}
+              placeholder="Guest name"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+            />
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Guest Phone</Text>
+            <TextInput
+              value={editValues.guestPhone}
+              onChangeText={(text) => setEditValues((prev) => ({ ...prev, guestPhone: text }))}
+              style={[styles.input, { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" }]}
+              placeholder="Guest phone"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+              keyboardType="phone-pad"
+            />
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Guest Email</Text>
+            <TextInput
+              value={editValues.guestEmail}
+              onChangeText={(text) => setEditValues((prev) => ({ ...prev, guestEmail: text }))}
+              style={[styles.input, { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" }]}
+              placeholder="Guest email"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Pickup Location</Text>
+            <TextInput
+              value={editValues.pickupLocation}
+              onChangeText={(text) => setEditValues((prev) => ({ ...prev, pickupLocation: text }))}
+              style={[styles.input, { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" }]}
+              placeholder="Pickup location"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+            />
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Drop Location</Text>
+            <TextInput
+              value={editValues.dropLocation}
+              onChangeText={(text) => setEditValues((prev) => ({ ...prev, dropLocation: text }))}
+              style={[styles.input, { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" }]}
+              placeholder="Drop location"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+            />
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Pickup Time</Text>
+            <View style={styles.dateFieldRow}>
+              <TouchableOpacity
+                onPress={() => openDateTimePicker("pickupTime")}
+                style={[
+                  styles.dateButton,
+                  { borderColor: isDark ? "#444" : "#D1D5DB", backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF" },
+                ]}
+              >
+                <Text style={{ color: isDark ? Colors.ivory : Colors.navy }}>
+                  {editValues.pickupTime ? formatDateTime(editValues.pickupTime) : "Select pickup time"}
+                </Text>
+              </TouchableOpacity>
+              {editValues.pickupTime ? (
+                <TouchableOpacity style={styles.clearButton} onPress={() => clearDateField("pickupTime")}>
+                  <Text style={styles.clearButtonText}>Clear</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Drop Time</Text>
+            <View style={styles.dateFieldRow}>
+              <TouchableOpacity
+                onPress={() => openDateTimePicker("dropTime")}
+                style={[
+                  styles.dateButton,
+                  { borderColor: isDark ? "#444" : "#D1D5DB", backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF" },
+                ]}
+              >
+                <Text style={{ color: isDark ? Colors.ivory : Colors.navy }}>
+                  {editValues.dropTime ? formatDateTime(editValues.dropTime) : "Select drop time (optional)"}
+                </Text>
+              </TouchableOpacity>
+              {editValues.dropTime ? (
+                <TouchableOpacity style={styles.clearButton} onPress={() => clearDateField("dropTime")}>
+                  <Text style={styles.clearButtonText}>Clear</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Flight Number</Text>
+            <TextInput
+              value={editValues.flightNo}
+              onChangeText={(text) => setEditValues((prev) => ({ ...prev, flightNo: text }))}
+              style={[styles.input, { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" }]}
+              placeholder="Optional"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+            />
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Flight ETA</Text>
+            <View style={styles.dateFieldRow}>
+              <TouchableOpacity
+                onPress={() => openDateTimePicker("flightEta")}
+                style={[
+                  styles.dateButton,
+                  { borderColor: isDark ? "#444" : "#D1D5DB", backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF" },
+                ]}
+              >
+                <Text style={{ color: isDark ? Colors.ivory : Colors.navy }}>
+                  {editValues.flightEta ? formatDateTime(editValues.flightEta) : "Select flight ETA (optional)"}
+                </Text>
+              </TouchableOpacity>
+              {editValues.flightEta ? (
+                <TouchableOpacity style={styles.clearButton} onPress={() => clearDateField("flightEta")}>
+                  <Text style={styles.clearButtonText}>Clear</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <View style={styles.inlineFields}>
+              <View style={styles.inlineField}>
+                <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Passengers</Text>
+                <TextInput
+                  value={editValues.passengers}
+                  onChangeText={(text) => setEditValues((prev) => ({ ...prev, passengers: text }))}
+                  style={[styles.input, { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" }]}
+                  placeholder="1"
+                  placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+                  keyboardType="number-pad"
+                />
+              </View>
+              <View style={styles.inlineField}>
+                <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Children</Text>
+                <TextInput
+                  value={editValues.children}
+                  onChangeText={(text) => setEditValues((prev) => ({ ...prev, children: text }))}
+                  style={[styles.input, { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" }]}
+                  placeholder="0"
+                  placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+                  keyboardType="number-pad"
+                />
+              </View>
+              <View style={styles.inlineField}>
+                <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Bags</Text>
+                <TextInput
+                  value={editValues.bags}
+                  onChangeText={(text) => setEditValues((prev) => ({ ...prev, bags: text }))}
+                  style={[styles.input, { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" }]}
+                  placeholder="0"
+                  placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+                  keyboardType="number-pad"
+                />
+              </View>
+            </View>
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Duration Hours</Text>
+            <TextInput
+              value={editValues.durationHours}
+              onChangeText={(text) => setEditValues((prev) => ({ ...prev, durationHours: text }))}
+              style={[styles.input, { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" }]}
+              placeholder="Optional"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+              keyboardType="decimal-pad"
+            />
+
+            <Text style={[styles.inputLabel, { color: isDark ? Colors.ivory : Colors.navy }]}>Notes</Text>
+            <TextInput
+              value={editValues.notes}
+              onChangeText={(text) => setEditValues((prev) => ({ ...prev, notes: text }))}
+              style={[
+                styles.input,
+                styles.multilineInput,
+                { color: isDark ? Colors.ivory : Colors.navy, borderColor: isDark ? "#444" : "#D1D5DB" },
+              ]}
+              placeholder="Optional notes"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#6B7280"}
+              multiline
+              numberOfLines={3}
+            />
+
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: Colors.success, marginTop: 8, opacity: isSavingDetails ? 0.7 : 1 }]}
+              disabled={isSavingDetails}
+              onPress={handleSaveDetails}
+            >
+              <Ionicons name="save-outline" color={Colors.white} size={18} />
+              <Text style={styles.primaryButtonText}>{isSavingDetails ? "Saving..." : "Save Details"}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Change Car (admin can re-pick category for editable bookings) */}
+        {(['REQUESTED', 'ACCEPTED', 'ASSIGNED', 'PENDING', 'DRIVER_ASSIGNED'] as string[]).includes(booking.status) && (
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: '#0EA5E9', marginTop: 12 }]}
+            onPress={() =>
+              navigation.navigate('ChangeCar', {
+                bookingId: booking.id,
+                currentVehicleCategoryId: (booking as any).vehicleCategoryId ?? undefined,
+                currentPrice:
+                  (booking as any).totalPrice ??
+                  (booking as any).finalPrice ??
+                  (booking as any).paymentAmount ??
+                  booking.fare ??
+                  undefined,
+                currentCurrency: (booking as any).quoteCurrency ?? 'MYR',
+              })
+            }
+          >
+            <Ionicons name="swap-horizontal" color={Colors.white} size={18} />
+            <Text style={styles.primaryButtonText}>Change Car</Text>
+          </TouchableOpacity>
+        )}
+
         {!booking.driver && (
           <TouchableOpacity
             style={styles.primaryButton}
@@ -604,6 +1016,15 @@ export const BookingDetailsScreen: React.FC<DetailsProps> = ({ route }) => {
             <Text style={styles.primaryButtonText}>Reassign Driver</Text>
           </TouchableOpacity>
         )}
+        {pickerVisible && pickerField ? (
+          <DateTimePicker
+            value={pickerDraftDate}
+            mode={pickerMode}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            is24Hour
+            onChange={onDateTimeChange}
+          />
+        ) : null}
         <View style={{ height: 40 }} />
       </ScrollView>
     </GradientBackground>
@@ -721,4 +1142,55 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   primaryButtonText: { color: Colors.white, fontWeight: "700", marginLeft: 8 },
+  editCard: {
+    marginTop: 12,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  multilineInput: {
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  dateFieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dateButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  clearButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "rgba(107,114,128,0.15)",
+  },
+  clearButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#6B7280",
+  },
+  inlineFields: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  inlineField: {
+    flex: 1,
+  },
 });
