@@ -10,6 +10,7 @@ interface NotificationsContextValue {
   refresh: () => Promise<void>;
   addNotification: (notification: Notification) => void;
   markAsRead: (notificationId: string) => Promise<void>;
+  clearAll: () => Promise<void>;
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | undefined>(undefined);
@@ -54,6 +55,20 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const clearAll = async () => {
+    const previous = notifications;
+    // Optimistically clear local state
+    setNotifications([]);
+    try {
+      await ApiService.clearAllNotifications();
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
+      // Restore on failure so the user doesn't lose their list silently
+      setNotifications(previous);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     if (isInitializing) return;
     if (isAuthenticated) {
@@ -64,7 +79,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [isAuthenticated, isInitializing]);
 
   const value = useMemo(
-    () => ({ notifications, unreadCount, setNotifications, refresh, addNotification, markAsRead }),
+    () => ({ notifications, unreadCount, setNotifications, refresh, addNotification, markAsRead, clearAll }),
     [notifications, unreadCount]
   );
 

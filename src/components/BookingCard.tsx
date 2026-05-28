@@ -32,6 +32,7 @@ interface BookingCardProps {
   booking: Booking;
   onAssignDriver: () => void;
   onViewDetails: () => void;
+  onTrackDriver?: () => void;
   crewRowColor?: string;
 }
 
@@ -39,6 +40,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   booking,
   onAssignDriver,
   onViewDetails,
+  onTrackDriver,
   crewRowColor,
 }) => {
   const { isDark } = useThemeContext();
@@ -103,7 +105,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   };
 
   const statusColor = getStatusColor(booking.status);
-  const cardBackgroundColor = crewRowColor ?? (isDark ? '#2A2A2A' : Colors.white);
+  const cardBackgroundColor = isDark ? '#2A2A2A' : Colors.white;
 
   return (
     <Animated.View
@@ -132,8 +134,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={[styles.bookingId, { color: isDark ? Colors.ivory : Colors.navy }]}>{booking.bookingId}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-              <Text style={[styles.statusText, { color: statusColor }]}>
+            <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+              <Text style={[styles.statusText, { color: Colors.white }]}>
                 {getStatusText(booking.status)}
               </Text>
             </View>
@@ -234,6 +236,18 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         <View style={styles.swipeHint}>
           <Text style={[styles.swipeHintText, { color: isDark ? Colors.ivory + '66' : Colors.navy + '66' }]}>← View Details | Assign Driver →</Text>
         </View>
+
+        {/* Action Buttons */}
+        {['EN_ROUTE', 'ARRIVED', 'PICKED_UP'].includes(String(booking.status)) ? (
+          <TouchableOpacity
+            style={styles.trackButton}
+            onPress={onTrackDriver}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="navigate" size={14} color={Colors.white} />
+            <Text style={styles.trackButtonText}>Track Driver</Text>
+          </TouchableOpacity>
+        ) : null}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -396,5 +410,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.navy + '66',
     fontStyle: 'italic',
+  },
+  trackButton: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1677ff',
+    paddingVertical: 7,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 6,
+  },
+  trackButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

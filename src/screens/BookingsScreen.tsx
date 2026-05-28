@@ -522,6 +522,7 @@ export const BookingsScreen: React.FC = () => {
               booking={item}
               onAssignDriver={() => handleAssignDriver(item)}
               onViewDetails={() => handleViewDetails(item)}
+              onTrackDriver={() => navigation.navigate('Monitoring')}
               crewRowColor={getCrewBookingRowColor(item, crewGuestColorMap)}
             />
           )}

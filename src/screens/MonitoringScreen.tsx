@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
+  Platform,
 } from "react-native";
-import MapView, { Marker, AnimatedRegion, PROVIDER_GOOGLE } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +19,25 @@ import {
   isAdminSocketConnected,
 } from "../services/adminSocket";
 import type { Socket } from "socket.io-client";
+
+type MapsModule = typeof import("react-native-maps");
+
+const loadMapsModule = (): MapsModule | null => {
+  try {
+    return require("react-native-maps") as MapsModule;
+  } catch (error) {
+    if (__DEV__) {
+      console.warn("react-native-maps native module is unavailable in this build.", error);
+    }
+    return null;
+  }
+};
+
+const mapsModule = loadMapsModule();
+const NativeMapView = mapsModule?.default;
+const NativeMarker = mapsModule?.Marker;
+const NativeAnimatedRegion = mapsModule?.AnimatedRegion;
+const nativeGoogleProvider = mapsModule?.PROVIDER_GOOGLE;
 
 type DriverLocation = {
   driverId: string;
@@ -83,9 +102,9 @@ export const MonitoringScreen: React.FC = () => {
   const [filterMode, setFilterMode] = useState<FilterMode>("drivers");
 
   const socketRef = useRef<Socket | null>(null);
-  const coordsRef = useRef<Map<string, AnimatedRegion>>(new Map());
+  const coordsRef = useRef<Map<string, any>>(new Map());
   const msgCountRef = useRef(0);
-  const mapRef = useRef<MapView | null>(null);
+  const mapRef = useRef<any>(null);
 
   const driverList = useMemo(() => Object.values(drivers), [drivers]);
   const rideList = useMemo(() => Object.values(rides), [rides]);
@@ -222,6 +241,8 @@ export const MonitoringScreen: React.FC = () => {
       };
     });
 
+    if (!NativeAnimatedRegion) return;
+
     const existing = coordsRef.current.get(next.driverId);
     if (existing) {
       existing
@@ -235,7 +256,7 @@ export const MonitoringScreen: React.FC = () => {
     } else {
       coordsRef.current.set(
         next.driverId,
-        new AnimatedRegion({
+        new NativeAnimatedRegion({
           latitude: next.latitude,
           longitude: next.longitude,
           latitudeDelta: 0,
@@ -494,6 +515,98 @@ export const MonitoringScreen: React.FC = () => {
     });
   }, [selectedDriverIds, visibleKey, filterMode, selectedRideIds, visibleRides, visibleDrivers]);
 
+  const renderMap = () => {
+    if (!NativeMapView || !NativeMarker || !NativeMarker.Animated || !NativeAnimatedRegion) {
+      return (
+        <View style={[styles.map, styles.mapUnavailable]}>
+          <Ionicons name="map-outline" size={42} color={Colors.navy + "50"} />
+          <Text style={styles.mapUnavailableTitle}>Map unavailable</Text>
+          <Text style={styles.mapUnavailableText}>Use a development build for live tracking.</Text>
+        </View>
+      );
+    }
+
+    const MapMarker = NativeMarker;
+    const AnimatedMapMarker = MapMarker.Animated;
+    const googleProvider =
+      Platform.OS === "ios" || Platform.OS === "android"
+        ? nativeGoogleProvider
+        : undefined;
+
+    return (
+      <NativeMapView
+        ref={mapRef}
+        style={styles.map}
+        initialRegion={initialRegion}
+        provider={googleProvider}
+      >
+        {visibleDrivers.map((d) => {
+          const animated = coordsRef.current.get(d.driverId);
+          const isOffline = d.status === "offline";
+          return (
+            <AnimatedMapMarker
+              key={d.driverId}
+              coordinate={
+                (animated ?? {
+                  latitude: d.latitude,
+                  longitude: d.longitude,
+                }) as any
+              }
+              title={d.driverName || `Driver ${d.driverId}`}
+              description={
+                d.driverPhone
+                  ? d.driverPhone + (isOffline ? " (Offline)" : "")
+                  : isOffline
+                    ? "Offline"
+                    : undefined
+              }
+              rotation={d.heading ?? 0}
+              flat
+              anchor={{ x: 0.5, y: 0.5 }}
+            >
+              <View
+                style={[
+                  styles.marker,
+                  isOffline && { backgroundColor: Colors.navy + "80" },
+                ]}
+              >
+                <Ionicons name="car" size={16} color={Colors.white} />
+              </View>
+            </AnimatedMapMarker>
+          );
+        })}
+        {filterMode === "rides" && visibleRides.map((ride) => (
+          <React.Fragment key={`ride-${ride.id}`}>
+            {ride.pickupLat && ride.pickupLng && (
+              <MapMarker
+                coordinate={{ latitude: ride.pickupLat, longitude: ride.pickupLng }}
+                title={`Pickup: ${ride.pickupAddress || 'Pickup Location'}`}
+                description={ride.customerName ? `Customer: ${ride.customerName}` : undefined}
+                pinColor="green"
+              >
+                <View style={[styles.marker, { backgroundColor: Colors.success }]}>
+                  <Ionicons name="location" size={16} color={Colors.white} />
+                </View>
+              </MapMarker>
+            )}
+            {ride.dropLat && ride.dropLng && (
+              <MapMarker
+                coordinate={{ latitude: ride.dropLat, longitude: ride.dropLng }}
+                title={`Drop: ${ride.dropAddress || 'Drop Location'}`}
+                description={`Status: ${ride.status}`}
+                pinColor="red"
+              >
+                <View style={[styles.marker, { backgroundColor: Colors.danger }]}>
+                  <Ionicons name="flag" size={16} color={Colors.white} />
+                </View>
+              </MapMarker>
+            )}
+          </React.Fragment>
+        ))}
+      </NativeMapView>
+    );
+  };
+
   return (
     <View style={styles.container}>
       {/* Floating Header */}
@@ -552,77 +665,7 @@ export const MonitoringScreen: React.FC = () => {
         </View>
       </View>
 
-      <MapView 
-        ref={mapRef} 
-        style={styles.map} 
-        initialRegion={initialRegion}
-        provider={PROVIDER_GOOGLE}
-      >
-        {visibleDrivers.map((d) => {
-          const animated = coordsRef.current.get(d.driverId);
-          const isOffline = d.status === "offline";
-          return (
-            <Marker.Animated
-              key={d.driverId}
-              coordinate={
-                (animated ?? {
-                  latitude: d.latitude,
-                  longitude: d.longitude,
-                }) as any
-              }
-              title={d.driverName || `Driver ${d.driverId}`}
-              description={
-                d.driverPhone
-                  ? d.driverPhone + (isOffline ? " (Offline)" : "")
-                  : isOffline
-                    ? "Offline"
-                    : undefined
-              }
-              rotation={d.heading ?? 0}
-              flat
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
-              <View
-                style={[
-                  styles.marker,
-                  isOffline && { backgroundColor: Colors.navy + "80" },
-                ]}
-              >
-                <Ionicons name="car" size={16} color={Colors.white} />
-              </View>
-            </Marker.Animated>
-          );
-        })}
-        {/* Ride pickup and drop markers */}
-        {filterMode === "rides" && visibleRides.map((ride) => (
-          <React.Fragment key={`ride-${ride.id}`}>
-            {ride.pickupLat && ride.pickupLng && (
-              <Marker
-                coordinate={{ latitude: ride.pickupLat, longitude: ride.pickupLng }}
-                title={`Pickup: ${ride.pickupAddress || 'Pickup Location'}`}
-                description={ride.customerName ? `Customer: ${ride.customerName}` : undefined}
-                pinColor="green"
-              >
-                <View style={[styles.marker, { backgroundColor: Colors.success }]}>
-                  <Ionicons name="location" size={16} color={Colors.white} />
-                </View>
-              </Marker>
-            )}
-            {ride.dropLat && ride.dropLng && (
-              <Marker
-                coordinate={{ latitude: ride.dropLat, longitude: ride.dropLng }}
-                title={`Drop: ${ride.dropAddress || 'Drop Location'}`}
-                description={`Status: ${ride.status}`}
-                pinColor="red"
-              >
-                <View style={[styles.marker, { backgroundColor: Colors.danger }]}>
-                  <Ionicons name="flag" size={16} color={Colors.white} />
-                </View>
-              </Marker>
-            )}
-          </React.Fragment>
-        ))}
-      </MapView>
+      {renderMap()}
 
       <Modal
         visible={isFilterOpen}
@@ -938,6 +981,27 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  mapUnavailable: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+    paddingTop: 120,
+    paddingBottom: 140,
+    backgroundColor: Colors.borderLight,
+  },
+  mapUnavailableTitle: {
+    marginTop: 12,
+    fontSize: 18,
+    fontWeight: "800",
+    color: Colors.navy,
+  },
+  mapUnavailableText: {
+    marginTop: 6,
+    fontSize: 13,
+    lineHeight: 18,
+    color: Colors.navy + "80",
+    textAlign: "center",
   },
   marker: {
     width: 36,

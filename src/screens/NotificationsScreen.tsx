@@ -6,6 +6,7 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +16,7 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { NotificationItem } from '../components/NotificationItem';
+import { NotificationDetailsModal } from '../components/NotificationDetailsModal';
 import { Notification, BottomTabParamList, RootStackParamList } from '../types';
 import { Colors } from '../constants/colors';
 import ApiService from '../services/api';
@@ -28,11 +30,13 @@ type NotifNav = CompositeNavigationProp<
 
 export const NotificationsScreen: React.FC = () => {
   const navigation = useNavigation<NotifNav>();
-  const { notifications, setNotifications, refresh } = useNotificationsContext();
+  const { notifications, setNotifications, refresh, clearAll } = useNotificationsContext();
   const { isDark, colors } = useThemeContext();
   const insets = useSafeAreaInsets();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [detailsVisible, setDetailsVisible] = useState(false);
 
   useEffect(() => {
     // ensure initial refresh if needed
@@ -60,10 +64,20 @@ export const NotificationsScreen: React.FC = () => {
       }
     }
 
-    // Navigate to booking details if available
-    if (notification.bookingId) {
-      navigation.navigate('BookingDetails', { bookingId: notification.bookingId });
-    }
+    // Open the details modal (includes booking context when available).
+    setSelectedNotification(notification);
+    setDetailsVisible(true);
+  };
+
+  const handleCloseDetails = () => {
+    setDetailsVisible(false);
+  };
+
+  const handleViewFullDetails = (bookingId: string) => {
+    setDetailsVisible(false);
+    setTimeout(() => {
+      navigation.navigate('BookingDetails', { bookingId });
+    }, 200);
   };
 
   const markAllAsRead = async () => {
@@ -73,6 +87,31 @@ export const NotificationsScreen: React.FC = () => {
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
+  };
+
+  const handleClearAll = () => {
+    if (notifications.length === 0) return;
+    Alert.alert(
+      'Clear all notifications?',
+      'This will permanently delete all of your notifications. Once cleared, you will not be able to view them again. Are you sure you want to continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear all',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearAll();
+            } catch (error) {
+              Alert.alert(
+                'Unable to clear notifications',
+                'Something went wrong while clearing your notifications. Please try again.'
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   const filteredNotifications = showUnreadOnly
@@ -97,14 +136,26 @@ export const NotificationsScreen: React.FC = () => {
               {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
             </Text>
           </View>
-          {unreadCount > 0 && (
-            <TouchableOpacity
-              style={styles.markAllButton}
-              onPress={markAllAsRead}
-            >
-              <Ionicons name="checkmark-done" size={18} color={Colors.white} />
-            </TouchableOpacity>
-          )}
+          <View style={styles.headerActions}>
+            {unreadCount > 0 && (
+              <TouchableOpacity
+                style={styles.markAllButton}
+                onPress={markAllAsRead}
+                accessibilityLabel="Mark all as read"
+              >
+                <Ionicons name="checkmark-done" size={18} color={Colors.white} />
+              </TouchableOpacity>
+            )}
+            {notifications.length > 0 && (
+              <TouchableOpacity
+                style={styles.markAllButton}
+                onPress={handleClearAll}
+                accessibilityLabel="Clear all notifications"
+              >
+                <Ionicons name="trash-outline" size={18} color={Colors.white} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </LinearGradient>
 
@@ -178,6 +229,13 @@ export const NotificationsScreen: React.FC = () => {
           </View>
         }
       />
+
+      <NotificationDetailsModal
+        visible={detailsVisible}
+        notification={selectedNotification}
+        onClose={handleCloseDetails}
+        onViewFullDetails={handleViewFullDetails}
+      />
     </View>
   );
 };
@@ -216,6 +274,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white + '20',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   filterContainer: {
     backgroundColor: Colors.white,

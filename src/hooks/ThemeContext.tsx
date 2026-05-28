@@ -12,7 +12,7 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(false);
 
   const value = useMemo<ThemeContextValue>(() => {
     const baseNav = isDark ? RNDarkTheme : RNDefaultTheme;

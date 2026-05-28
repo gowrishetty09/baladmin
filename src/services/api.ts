@@ -7,6 +7,9 @@ import {
   VehicleCategory,
   UpdateBookingDetailsPayload,
   DashboardSummary,
+  DashboardOverview,
+  DashboardTotals,
+  OverviewRangeMonths,
   Notification,
   NotificationType,
   ApiResponse,
@@ -160,6 +163,19 @@ const normalizeBooking = (raw: any): Booking => {
     // Ride type
     rideType: raw?.rideType ?? undefined,
     tourPackageId: raw?.tourPackageId ?? undefined,
+    // Pricing / payment
+    finalPrice: raw?.finalPrice != null ? Number(raw.finalPrice) : undefined,
+    quotedPrice: raw?.quotedPrice != null ? Number(raw.quotedPrice) : undefined,
+    paymentAmount: raw?.paymentAmount != null ? Number(raw.paymentAmount) : undefined,
+    paymentStatus: raw?.paymentStatus ?? undefined,
+    // Trip metrics
+    tripDistanceKm: raw?.tripDistanceKm != null ? Number(raw.tripDistanceKm) : undefined,
+    durationHours: raw?.durationHours != null ? Number(raw.durationHours) : undefined,
+    // Cancellation metadata
+    cancellationReason: raw?.cancellationReason ?? raw?.driverCancellationReason ?? undefined,
+    driverCancellationReason: raw?.driverCancellationReason ?? undefined,
+    cancelledBy: raw?.cancelledBy ?? undefined,
+    cancelledAt: raw?.cancelledAt ?? undefined,
   };
 };
 
@@ -346,6 +362,7 @@ class ApiService {
         ongoingRides: accepted + assigned,
         pendingUnassigned: requested,
         completedRides: completed,
+        cancelledRides: 0,
         // Not provided by this endpoint.
         sosTickets: 0,
         totalRevenue: 0,
@@ -354,6 +371,50 @@ class ApiService {
       console.error('Error fetching dashboard summary:', error);
       throw error;
     }
+  }
+
+  // All-time totals (revenue + completed rides) sourced from /analytics with a wide range.
+  async getDashboardTotals(): Promise<DashboardTotals> {
+    const from = '2000-01-01';
+    const to = new Date().toISOString().slice(0, 10);
+    const { data } = await this.api.get('/analytics', { params: { from, to } });
+    const kpi = data?.kpiSummary ?? {};
+    return {
+      totalRevenue: Number(kpi.totalRevenue ?? 0),
+      completedRides: Number(kpi.completedBookings ?? 0),
+    };
+  }
+
+  // Overview stats for the last N months: new bookings, ongoing, completed, cancelled.
+  async getDashboardOverview(months: OverviewRangeMonths): Promise<DashboardOverview> {
+    const now = new Date();
+    const toDate = new Date(now);
+    const fromDate = new Date(now);
+    fromDate.setMonth(fromDate.getMonth() - months);
+
+    const from = fromDate.toISOString().slice(0, 10);
+    const to = toDate.toISOString().slice(0, 10);
+
+    const { data } = await this.api.get('/analytics', { params: { from, to } });
+    const kpi = data?.kpiSummary ?? {};
+    const byStatus: Array<{ status: string; count: number }> = Array.isArray(data?.bookingsByStatus)
+      ? data.bookingsByStatus
+      : [];
+
+    const countFor = (statuses: string[]) =>
+      byStatus
+        .filter((row) => statuses.includes(String(row.status).toUpperCase()))
+        .reduce((sum, row) => sum + Number(row.count ?? 0), 0);
+
+    // "Ongoing" covers bookings actively in motion between dispatch and completion.
+    const ongoingRides = countFor(['EN_ROUTE', 'ARRIVED', 'PICKED_UP']);
+
+    return {
+      newBookings: Number(kpi.totalBookings ?? 0),
+      ongoingRides,
+      completedRides: Number(kpi.completedBookings ?? 0),
+      cancelledRides: Number(kpi.cancelledBookings ?? 0),
+    };
   }
 
   // Bookings
@@ -451,6 +512,15 @@ class ApiService {
       await this.api.patch(`/notifications/${notificationId}/read`);
     } catch (error) {
       console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  }
+
+  async clearAllNotifications(): Promise<void> {
+    try {
+      await this.api.delete('/notifications');
+    } catch (error) {
+      console.error('Error clearing notifications:', error);
       throw error;
     }
   }

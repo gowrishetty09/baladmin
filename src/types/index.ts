@@ -99,6 +99,19 @@ export interface Booking {
   // Ride type
   rideType?: 'ONE_WAY' | 'ROUND_TRIP' | 'HOURLY' | 'DAILY' | 'AIRPORT' | 'TOUR';
   tourPackageId?: string;
+  // Pricing / payment
+  finalPrice?: number;
+  quotedPrice?: number;
+  paymentAmount?: number;
+  paymentStatus?: string;
+  // Trip metrics
+  tripDistanceKm?: number;
+  durationHours?: number;
+  // Cancellation metadata
+  cancellationReason?: string;
+  driverCancellationReason?: string;
+  cancelledBy?: 'CUSTOMER' | 'DRIVER' | 'HOTEL' | 'ADMIN' | 'SYSTEM';
+  cancelledAt?: string;
 }
 
 export interface UpdateBookingDetailsPayload {
@@ -147,8 +160,24 @@ export interface DashboardSummary {
   ongoingRides: number;
   pendingUnassigned: number;
   completedRides: number;
+  cancelledRides: number;
   sosTickets: number;
   totalRevenue: number;
+}
+
+// Overview range options (in months) for the dashboard "Overview" section.
+export type OverviewRangeMonths = 1 | 2 | 3 | 6 | 12;
+
+export interface DashboardOverview {
+  newBookings: number;
+  ongoingRides: number;
+  completedRides: number;
+  cancelledRides: number;
+}
+
+export interface DashboardTotals {
+  totalRevenue: number;
+  completedRides: number;
 }
 
 // Notification types

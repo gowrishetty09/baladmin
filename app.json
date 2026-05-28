@@ -31,7 +31,7 @@
       "versionCode": 2,
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDRN3_J4mGdkmWifoACmHBfT68sIvD3kQ8"
+          "apiKey": "AIzaSyAz4YMeMa3klDCnm_HZh6IuwkqA_5t0I0w"
         }
       }
     },
@@ -49,7 +49,8 @@
       [
         "react-native-maps",
         {
-          "androidGoogleMapsApiKey": "AIzaSyDRN3_J4mGdkmWifoACmHBfT68sIvD3kQ8"
+          "androidGoogleMapsApiKey": "AIzaSyAz4YMeMa3klDCnm_HZh6IuwkqA_5t0I0w",
+          "iosGoogleMapsApiKey": "AIzaSyAz4YMeMa3klDCnm_HZh6IuwkqA_5t0I0w"
         }
       ]
     ],
