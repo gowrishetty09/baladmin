@@ -50,7 +50,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         name: 'Bal-Adminapp',
         slug: 'bal-admin',
         version: '1.1.0',
-        orientation: 'portrait',
+        orientation: 'default',
         icon: './assets/icon.png',
         userInterfaceStyle: 'light',
         newArchEnabled: true,
@@ -67,6 +67,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             ...(config.ios ?? {}),
             supportsTablet: true,
             bundleIdentifier: 'com.bal.adminapp',
+            infoPlist: {
+                ...(config.ios?.infoPlist ?? {}),
+                NSCameraUsageDescription: 'Take photos to upload to BAL Admin.',
+                NSPhotoLibraryUsageDescription: 'Choose photos and documents to upload to BAL Admin.',
+            },
             config: {
                 ...(config.ios?.config ?? {}),
                 ...(iosMapsApiKey ? { googleMapsApiKey: iosMapsApiKey } : {}),
@@ -110,6 +115,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             return next;
         })(),
         extra: {
+            adminUrl: process.env.EXPO_PUBLIC_ADMIN_URL || 'https://bestaerolimo.com/admin/',
             eas: {
                 projectId: '7a0b27b5-a719-45b0-ae7c-68da67ac0c41',
                 apiBaseUrl: 'https://bestaerolimo.com/api',

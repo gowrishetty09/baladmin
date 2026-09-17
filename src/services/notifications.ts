@@ -91,7 +91,6 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       projectId: projectId,
     });
 
-    console.log('Expo Push Token:', tokenData.data);
     return tokenData.data;
   } catch (error) {
     console.warn('Failed to register for push notifications:', error);
