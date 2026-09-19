@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-The admin mobile app (baladmin) has been fully integrated with the backend cab management API. All endpoints are now connected, authentication is fully implemented with token refresh logic, and the app is ready for deployment.
+The admin mobile app (baladmin) has been fully integrated with the backend BAL API. All endpoints are now connected, authentication is fully implemented with token refresh logic, and the app is ready for deployment.
 
 ## 📁 Files Created/Modified
 
@@ -88,17 +88,20 @@ Logout:
 ## 🎯 Key Features Implemented
 
 ✅ **JWT Authentication**
+
 - Login with email/password
 - Secure token storage (encrypted via expo-secure-store)
 - Automatic token refresh on 401
 - Logout with cleanup
 
 ✅ **Session Management**
+
 - Persist auth state across app restarts
 - Check refresh token expiration
 - Handle role-based access (admin role required)
 
 ✅ **API Client**
+
 - Axios HTTP client with 20s timeout
 - Bearer token auto-injection
 - Token refresh retry logic
@@ -106,12 +109,14 @@ Logout:
 - Auth endpoint exclusion from refresh logic
 
 ✅ **Error Handling**
+
 - Graceful 401 handling with retry
 - Token expired detection
 - User-friendly error messages
 - Automatic logout on auth failure
 
 ✅ **All 9 Backend Endpoints**
+
 1. Dashboard summary (with date range)
 2. Bookings list (with filtering & pagination)
 3. Booking detail
@@ -164,6 +169,7 @@ baladmin/
 ## 🧪 Testing the Implementation
 
 ### Test 1: Login Flow
+
 ```
 1. Start app (should show LoginScreen)
 2. Enter admin email/password
@@ -173,6 +179,7 @@ baladmin/
 ```
 
 ### Test 2: Session Persistence
+
 ```
 1. Login to app
 2. Force quit app
@@ -182,6 +189,7 @@ baladmin/
 ```
 
 ### Test 3: Token Refresh
+
 ```
 1. Make API call (works fine)
 2. Manually expire access token
@@ -190,6 +198,7 @@ baladmin/
 ```
 
 ### Test 4: Invalid Credentials
+
 ```
 1. Enter wrong email/password
 2. Tap "Sign In"
@@ -200,26 +209,28 @@ baladmin/
 ## 📞 Integration Points
 
 ### In Your Screens
+
 ```tsx
 import useAuth from '../hooks/useAuth';
 import apiService from '../services/api';
 
 function HomeScreen() {
   const { user, logout } = useAuth();
-  
+
   useEffect(() => {
     apiService.getDashboardSummary().then(data => {
       // use data
     });
   }, []);
-  
+
   return (...);
 }
 ```
 
 ### In App.tsx
+
 ```tsx
-import { AuthProvider } from './src/hooks/useAuthStore';
+import { AuthProvider } from "./src/hooks/useAuthStore";
 
 export default function App() {
   return (
@@ -232,14 +243,14 @@ export default function App() {
 
 ## ✨ What's Different from Before
 
-| Before | After |
-|--------|-------|
-| Mock data in api.ts | Real backend endpoints |
-| Zustand auth store | React Context AuthProvider |
-| No token management | Full JWT with auto-refresh |
-| No login screen | Complete LoginScreen component |
-| No error handling | Comprehensive error handling |
-| Hardcoded URLs | Environment-based configuration |
+| Before              | After                           |
+| ------------------- | ------------------------------- |
+| Mock data in api.ts | Real backend endpoints          |
+| Zustand auth store  | React Context AuthProvider      |
+| No token management | Full JWT with auto-refresh      |
+| No login screen     | Complete LoginScreen component  |
+| No error handling   | Comprehensive error handling    |
+| Hardcoded URLs      | Environment-based configuration |
 
 ## 🎓 Learning Resources
 
@@ -272,5 +283,4 @@ export default function App() {
 **Status**: ✅ READY FOR INTEGRATION  
 **Last Updated**: December 20, 2025  
 **Pattern Reference**: bal-customer app  
-**Backend**: cab-management monorepo  
-
+**Backend**: cab-management monorepo

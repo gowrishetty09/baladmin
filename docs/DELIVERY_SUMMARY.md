@@ -2,7 +2,7 @@
 
 ## 📦 Deliverables Summary
 
-### Project: Cab Management System - Admin Mobile App
+### Project: BAL System - Admin Mobile App
 
 ### Component: Firebase Cloud Messaging (FCM) Push Notifications
 

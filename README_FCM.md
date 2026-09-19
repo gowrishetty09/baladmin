@@ -2,11 +2,12 @@
 
 ## 📱 Project Overview
 
-This project implements **Firebase Cloud Messaging (FCM)** push notifications for the Cab Management System Admin Mobile Application. The implementation provides comprehensive support for push notifications across all app states (foreground, background, and killed) with deep linking to relevant screens.
+This project implements **Firebase Cloud Messaging (FCM)** push notifications for the BAL System Admin Mobile Application. The implementation provides comprehensive support for push notifications across all app states (foreground, background, and killed) with deep linking to relevant screens.
 
 ## ✨ Features Implemented
 
 ### Core FCM Features
+
 - ✅ **Android Support** - Google Play Services integration with google-services.json
 - ✅ **iOS Support** - APNs integration with GoogleService-Info.plist
 - ✅ **Permission Handling** - Automatic permission requests on first launch
@@ -16,6 +17,7 @@ This project implements **Firebase Cloud Messaging (FCM)** push notifications fo
 - ✅ **Killed State Notifications** - Deep linking when user taps notification on lock screen
 
 ### Advanced Features
+
 - ✅ **Deep Linking** - Navigate to booking details or SOS screens from notifications
 - ✅ **Topic Subscriptions** - Subscribe to notification topics (all-admins, sos-alerts, etc.)
 - ✅ **Notification Handlers** - Type-based notification routing and handling
@@ -24,6 +26,7 @@ This project implements **Firebase Cloud Messaging (FCM)** push notifications fo
 - ✅ **Notification Priorities** - Support for LOW, MEDIUM, HIGH priority levels
 
 ### Notification Types Supported
+
 - `NEW_BOOKING` - New booking created
 - `DRIVER_ASSIGNED` - Driver assigned to booking
 - `RIDE_STARTED` - Ride has started
@@ -69,26 +72,31 @@ baladmin/
 ## 🚀 Quick Start
 
 ### 1. Install Dependencies
+
 ```bash
 npm install
 ```
 
 Adds:
+
 - `@react-native-firebase/app@^21.1.0`
 - `@react-native-firebase/messaging@^21.1.0`
 
 ### 2. Android Configuration
+
 1. Download `google-services.json` from [Firebase Console](https://console.firebase.google.com)
 2. Place it in the project root directory
 3. Done! The app.json plugin configuration handles the rest
 
 ### 3. iOS Configuration
+
 1. Download `GoogleService-Info.plist` from Firebase Console
 2. Place it in the project root directory
 3. Upload APNs certificate/key to Firebase Console
 4. Configure push notifications in your provisioning profile
 
 ### 4. Build & Test
+
 ```bash
 # Android
 npm run android
@@ -104,14 +112,18 @@ eas build -p ios --profile production
 ## 📚 Documentation
 
 ### For Setup & Configuration
+
 👉 **Start here**: [FCM_SETUP.md](FCM_SETUP.md)
+
 - Step-by-step Android setup
 - Step-by-step iOS setup
 - Configuration verification
 - Troubleshooting guide
 
 ### For Complete Implementation Details
+
 👉 **Read this**: [FCM_IMPLEMENTATION.md](FCM_IMPLEMENTATION.md)
+
 - Architecture overview
 - Installation instructions
 - Android configuration details
@@ -122,7 +134,9 @@ eas build -p ios --profile production
 - Production deployment
 
 ### For Backend Integration
+
 👉 **Implement these**: [BACKEND_API_GUIDE.md](BACKEND_API_GUIDE.md)
+
 - API endpoint specifications
 - Database schemas
 - Firebase Admin SDK code examples
@@ -131,7 +145,9 @@ eas build -p ios --profile production
 - Security considerations
 
 ### For Understanding the Architecture
+
 👉 **Study this**: [ARCHITECTURE_AND_FLOW.md](ARCHITECTURE_AND_FLOW.md)
+
 - System architecture diagram
 - Data flow diagrams
 - Component interaction
@@ -139,7 +155,9 @@ eas build -p ios --profile production
 - State management flow
 
 ### For Quick Lookup
+
 👉 **Use this**: [FCM_QUICK_REFERENCE.md](FCM_QUICK_REFERENCE.md)
+
 - File locations
 - Common tasks
 - API endpoints
@@ -147,7 +165,9 @@ eas build -p ios --profile production
 - Debugging checklist
 
 ### For Implementation Status
+
 👉 **Check this**: [COMPLETION_CHECKLIST.md](COMPLETION_CHECKLIST.md)
+
 - What's implemented
 - What's pending
 - File summary
@@ -156,68 +176,74 @@ eas build -p ios --profile production
 ## 🔧 Core Services
 
 ### FCM Service (`src/services/fcm.ts`)
+
 Main service for Firebase Cloud Messaging operations:
+
 ```typescript
 // Initialization
-initializeFCM()
-requestNotificationPermission()
-requestUserPermission()
+initializeFCM();
+requestNotificationPermission();
+requestUserPermission();
 
 // Token Management
-getFCMToken()
-setFCMAutoInit()
+getFCMToken();
+setFCMAutoInit();
 
 // Notification Handlers
-handleForegroundNotification(callback)
-handleBackgroundNotification(callback)
-getInitialNotification()
+handleForegroundNotification(callback);
+handleBackgroundNotification(callback);
+getInitialNotification();
 
 // Topic Management
-subscribeToTopic(topic)
-unsubscribeFromTopic(topic)
+subscribeToTopic(topic);
+unsubscribeFromTopic(topic);
 
 // Utilities
-parseNotificationData(notification)
+parseNotificationData(notification);
 ```
 
 ### Topic Management (`src/services/fcmTopics.ts`)
+
 Advanced topic and handler management:
+
 ```typescript
 // Predefined Topics
-subscribeToAdminTopics()
+subscribeToAdminTopics();
 
 // Handler Registry
-registerNotificationHandler(type, handler)
-setupNotificationHandlers(navigationRef)
+registerNotificationHandler(type, handler);
+setupNotificationHandlers(navigationRef);
 
 // Utilities
-extractNotificationData(notification)
-validateNotification(notification)
-getNotificationPriority(notification)
-groupNotifications(notifications)
-shouldShowNotification(notification, minPriority)
+extractNotificationData(notification);
+validateNotification(notification);
+getNotificationPriority(notification);
+groupNotifications(notifications);
+shouldShowNotification(notification, minPriority);
 ```
 
 ### Testing Utilities (`src/services/fcmTesting.ts`)
+
 Comprehensive testing tools:
+
 ```typescript
 // Mock Data
-createMockNotification(overrides)
-createBookingNotification(bookingId, type)
-createSOSNotification(bookingId, message)
+createMockNotification(overrides);
+createBookingNotification(bookingId, type);
+createSOSNotification(bookingId, message);
 
 // Validation
-validateNotification(notification)
-generateTestReport(notification, validation, handler)
+validateNotification(notification);
+generateTestReport(notification, validation, handler);
 
 // Test Scenarios
-testNotificationScenario(state, notification, handler)
-batchTestNotifications(notifications, handler)
+testNotificationScenario(state, notification, handler);
+batchTestNotifications(notifications, handler);
 
 // Test Suite
 class FCMTestSuite {
-  addTest(name, notification)
-  runTests(handler)
+  addTest(name, notification);
+  runTests(handler);
 }
 ```
 
@@ -262,25 +288,29 @@ See [BACKEND_API_GUIDE.md](BACKEND_API_GUIDE.md) for complete specifications and
 ### Use Testing Utilities
 
 ```typescript
-import { createMockNotification, validateNotification } from './src/services/fcmTesting';
+import {
+  createMockNotification,
+  validateNotification,
+} from "./src/services/fcmTesting";
 
 // Create test notification
 const notification = createMockNotification({
-  data: { type: 'NEW_BOOKING', bookingId: 'BK-001' }
+  data: { type: "NEW_BOOKING", bookingId: "BK-001" },
 });
 
 // Validate notification
 const validation = validateNotification(notification);
 if (validation.isValid) {
-  console.log('Valid notification!');
+  console.log("Valid notification!");
 } else {
-  console.error('Errors:', validation.errors);
+  console.error("Errors:", validation.errors);
 }
 ```
 
 ## 🔒 Security
 
 ### Implemented
+
 - ✅ Token secure transmission over HTTPS
 - ✅ Payload validation before processing
 - ✅ Deep link validation
@@ -288,6 +318,7 @@ if (validation.isValid) {
 - ✅ Error message sanitization
 
 ### To Implement (Backend)
+
 - ⏳ Token encryption in database
 - ⏳ Token rotation strategy
 - ⏳ Rate limiting on API endpoints
@@ -297,6 +328,7 @@ if (validation.isValid) {
 ## 📊 Monitoring & Analytics
 
 ### Metrics to Track
+
 - Notification delivery rate
 - Read rate
 - Engagement rate
@@ -304,26 +336,33 @@ if (validation.isValid) {
 - Device statistics (by platform)
 
 ### Logging
+
 All FCM operations are logged with context for debugging and monitoring.
 
 ## ⚙️ Configuration
 
 ### Android (google-services.json)
+
 Downloaded from Firebase Console - contains:
+
 - Project ID
 - API keys
 - Client certificates
 - Service account info
 
 ### iOS (GoogleService-Info.plist)
+
 Downloaded from Firebase Console - contains:
+
 - BUNDLE_ID
 - GCM_SENDER_ID
 - API_KEY
 - CLIENT_ID
 
 ### Build Configuration (app.json & eas.json)
+
 Already configured with:
+
 - Firebase plugins
 - Android google-services.json reference
 - iOS GoogleService-Info.plist reference
@@ -339,12 +378,14 @@ Already configured with:
 ## 🐛 Debugging
 
 ### Enable Verbose Logging
+
 ```typescript
-import { enableLogging } from '@react-native-firebase/messaging';
+import { enableLogging } from "@react-native-firebase/messaging";
 enableLogging(true);
 ```
 
 ### Check Logs
+
 ```bash
 # Android
 adb logcat | grep "FCM"
@@ -354,6 +395,7 @@ xcrun simctl spawn booted log stream --predicate 'eventMessage contains[c] "FCM"
 ```
 
 ### Common Issues
+
 See [FCM_SETUP.md - Troubleshooting](FCM_SETUP.md#11-troubleshooting) section
 
 ## 📦 Dependencies Added
@@ -368,11 +410,13 @@ See [FCM_SETUP.md - Troubleshooting](FCM_SETUP.md#11-troubleshooting) section
 ## 🚢 Deployment
 
 ### Android
+
 1. Ensure `google-services.json` is in project root
 2. Build signed APK/AAB: `eas build -p android --profile production`
 3. Upload to Google Play Console
 
 ### iOS
+
 1. Ensure `GoogleService-Info.plist` is in project root
 2. Upload APNs certificate to Firebase
 3. Build with EAS: `eas build -p ios --profile production`
@@ -393,12 +437,14 @@ See [FCM_SETUP.md - Troubleshooting](FCM_SETUP.md#11-troubleshooting) section
 ## 🎯 Next Steps
 
 ### 1. Backend Development (Team: Backend)
+
 - Implement API endpoints per BACKEND_API_GUIDE.md
 - Create database tables
 - Set up event triggers
 - Test endpoints
 
 ### 2. Testing Phase (Team: QA)
+
 - Install and run the app
 - Test all notification scenarios
 - Verify deep linking
@@ -406,6 +452,7 @@ See [FCM_SETUP.md - Troubleshooting](FCM_SETUP.md#11-troubleshooting) section
 - Performance testing
 
 ### 3. Deployment (Team: DevOps)
+
 - Build signed APK (Android)
 - Build with EAS (iOS)
 - Configure app stores
@@ -413,6 +460,7 @@ See [FCM_SETUP.md - Troubleshooting](FCM_SETUP.md#11-troubleshooting) section
 - Monitor metrics
 
 ### 4. Post-Deployment (Team: All)
+
 - Monitor delivery rates
 - Track user engagement
 - Optimize based on data
@@ -421,6 +469,7 @@ See [FCM_SETUP.md - Troubleshooting](FCM_SETUP.md#11-troubleshooting) section
 ## 📞 Support
 
 ### Documentation
+
 - [FCM_SETUP.md](FCM_SETUP.md) - Setup guide
 - [FCM_IMPLEMENTATION.md](FCM_IMPLEMENTATION.md) - Implementation guide
 - [BACKEND_API_GUIDE.md](BACKEND_API_GUIDE.md) - API specifications
@@ -428,6 +477,7 @@ See [FCM_SETUP.md - Troubleshooting](FCM_SETUP.md#11-troubleshooting) section
 - [FCM_QUICK_REFERENCE.md](FCM_QUICK_REFERENCE.md) - Quick lookup
 
 ### External Resources
+
 - [Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging)
 - [React Native Firebase](https://rnfirebase.io/messaging/usage)
 - [Android Notifications](https://developer.android.com/guide/topics/ui/notifiers/notifications)
@@ -435,19 +485,19 @@ See [FCM_SETUP.md - Troubleshooting](FCM_SETUP.md#11-troubleshooting) section
 
 ## 📈 Implementation Status
 
-| Phase | Status | Details |
-|-------|--------|---------|
-| Development | ✅ Complete | All code implemented and tested |
-| Configuration | ✅ Complete | Android and iOS config ready |
-| Documentation | ✅ Complete | 3500+ lines of documentation |
-| Testing | ✅ Complete | Testing utilities provided |
-| Backend Integration | ⏳ Pending | API specifications provided |
-| QA Testing | ⏳ Pending | Test checklist provided |
-| Deployment | ⏳ Pending | Deployment guide provided |
+| Phase               | Status      | Details                         |
+| ------------------- | ----------- | ------------------------------- |
+| Development         | ✅ Complete | All code implemented and tested |
+| Configuration       | ✅ Complete | Android and iOS config ready    |
+| Documentation       | ✅ Complete | 3500+ lines of documentation    |
+| Testing             | ✅ Complete | Testing utilities provided      |
+| Backend Integration | ⏳ Pending  | API specifications provided     |
+| QA Testing          | ⏳ Pending  | Test checklist provided         |
+| Deployment          | ⏳ Pending  | Deployment guide provided       |
 
 ## 📝 License
 
-This implementation is part of the Cab Management System project.
+This implementation is part of the BAL System project.
 
 ## 👥 Contributors
 

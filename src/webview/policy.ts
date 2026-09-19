@@ -32,3 +32,22 @@ export function isExternalUrl(value: string): boolean {
   try { return ['https:', 'http:', 'tel:', 'mailto:', 'geo:', 'maps:', 'comgooglemaps:'].includes(new URL(value).protocol); }
   catch { return false; }
 }
+
+/** Android WebMessageListener reports an origin, legacy Android/iOS a full URL. */
+export function isTrustedBridgeSource(sourceUrl: string, topLevelUrl: string, config: ReturnType<typeof adminConfig>): boolean {
+  if (!isAdminUrl(topLevelUrl, config)) return false;
+  try {
+    const source = new URL(sourceUrl);
+    if (source.origin !== config.origin || source.username || source.password) return false;
+    return source.pathname === '/' || isAdminUrl(sourceUrl, config);
+  } catch { return false; }
+}
+
+/** Request IDs correlate replies; the document guard prevents cross-origin delivery. */
+export function nativeEventScript(config: ReturnType<typeof adminConfig>, event: string, detail: unknown): string {
+  return '(function(){' +
+    'if(location.origin !== ' + JSON.stringify(config.origin) + ') return;' +
+    'if(location.pathname !== ' + JSON.stringify(config.path) + ' && !location.pathname.startsWith(' + JSON.stringify(config.path + '/') + ')) return;' +
+    'window.dispatchEvent(new CustomEvent(' + JSON.stringify(event) + ',{detail:' + JSON.stringify(detail) + '}));' +
+    '})();true;';
+}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, BackHandler, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
@@ -9,7 +9,7 @@ import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
 import Constants from 'expo-constants';
 import { configureNotificationHandler, registerForPushNotificationsAsync } from '../services/notifications';
-import { adminConfig, isAdminUrl, isExternalUrl, notificationPath, safeFilename } from './policy';
+import { adminConfig, isAdminUrl, isTrustedBridgeSource, nativeEventScript, isExternalUrl, notificationPath, safeFilename } from './policy';
 
 const configuredUrl = process.env.EXPO_PUBLIC_ADMIN_URL || Constants.expoConfig?.extra?.adminUrl || 'https://bestaerolimo.com/admin/';
 const SESSION_KEY = 'bal_web_admin_session_v1';
@@ -44,12 +44,13 @@ export function AdminWebView() {
   const pushRequest = useRef<Promise<string | null> | null>(null);
   const storageQueue = useRef<Promise<unknown>>(Promise.resolve());
   const documentBusy = useRef(false);
-  const pageGeneration = useRef(0);
+  const currentUrl = useRef(config?.url ?? '');
+  const source = useMemo(() => config ? { uri: config.url } : undefined, [config]);
 
   const emit = useCallback((event: string, detail: unknown) => {
     if (!config) return;
     // Async native work may finish after navigation; never send secrets to another origin.
-    webview.current?.injectJavaScript(`(function(){if(location.origin===${JSON.stringify(config.origin)} && (location.pathname===${JSON.stringify(config.path)} || location.pathname.startsWith(${JSON.stringify(config.path + '/')})) {window.dispatchEvent(new CustomEvent(${JSON.stringify(event)}, {detail:${JSON.stringify(detail)}}));}})();true;`);
+    webview.current?.injectJavaScript(nativeEventScript(config, event, detail));
   }, [config]);
 
   const sendPendingRoute = useCallback(() => {
@@ -100,11 +101,10 @@ export function AdminWebView() {
   }, []);
 
   const handleMessage = async ({ nativeEvent }: WebViewMessageEvent) => {
-    if (!config || !isAdminUrl(nativeEvent.url, config)) return;
+    if (!config || !isTrustedBridgeSource(nativeEvent.url, currentUrl.current, config)) return;
     let request: { version: number; id: string; type: string; payload?: any };
     try { request = JSON.parse(nativeEvent.data); } catch { return; }
     if (request?.version !== 1 || typeof request.id !== 'string' || request.id.length > 100 || typeof request.type !== 'string') return;
-    const generation = pageGeneration.current;
     let result: unknown = null;
     try {
       switch (request.type) {
@@ -124,6 +124,8 @@ export function AdminWebView() {
           break;
         }
         case 'ready':
+          setLoading(false);
+          setError(null);
           ready.current = true;
           authenticated.current = request.payload?.authenticated === true;
           sendPendingRoute();
@@ -183,13 +185,22 @@ export function AdminWebView() {
           break;
         default: throw new Error('Unsupported mobile action');
       }
-      if (generation === pageGeneration.current) emit('bal:native-response', { version: 1, id: request.id, result });
+      emit('bal:native-response', { version: 1, id: request.id, result });
     } catch {
-      if (generation === pageGeneration.current) emit('bal:native-response', { version: 1, id: request.id, error: 'Unable to complete this action. Please try again.' });
+      emit('bal:native-response', { version: 1, id: request.id, error: 'Unable to complete this action. Please try again.' });
     }
   };
 
-  const retry = () => { setError(null); setLoading(true); setInstance(value => value + 1); };
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setTimeout(() => {
+      setLoading(false);
+      setError('BAL Admin took too long to load. Check your connection and try again.');
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
+  const retry = () => { ready.current = false; authenticated.current = false; setError(null); setLoading(true); setInstance(value => value + 1); };
   if (!config) return <SafeAreaView style={styles.center}><Text>Invalid admin URL. Configure EXPO_PUBLIC_ADMIN_URL with the HTTPS admin address.</Text></SafeAreaView>;
 
   return (
@@ -197,7 +208,8 @@ export function AdminWebView() {
       <WebView
         key={instance}
         ref={webview}
-        source={{ uri: config.url }}
+        source={source}
+        webviewDebuggingEnabled={false}
         applicationNameForUserAgent="BALAdminMobile/1"
         style={styles.container}
         originWhitelist={['*']}
@@ -213,7 +225,11 @@ export function AdminWebView() {
         onMessage={event => { void handleMessage(event); }}
         onShouldStartLoadWithRequest={request => {
           if (request.isTopFrame === false) return request.url === 'about:blank' || request.url.startsWith('https://');
-          if (isAdminUrl(request.url, config)) return true;
+          if (isAdminUrl(request.url, config)) {
+            ready.current = false;
+            authenticated.current = false;
+            return true;
+          }
           external(request.url);
           return false;
         }}
@@ -224,8 +240,14 @@ export function AdminWebView() {
             emit('bal:native-event', { version: 1, type: 'download', payload: { url: nativeEvent.targetUrl } });
           } else external(nativeEvent.targetUrl);
         }}
-        onNavigationStateChange={state => { canGoBack.current = state.canGoBack; }}
-        onLoadStart={() => { pageGeneration.current++; ready.current = false; authenticated.current = false; setLoading(true); }}
+        onNavigationStateChange={state => { currentUrl.current = state.url; canGoBack.current = state.canGoBack; }}
+        onLoadStart={({ nativeEvent }) => {
+          currentUrl.current = nativeEvent.url;
+          // Android also emits this event for pushState/replaceState. Those
+          // events must not reset authentication or discard pending RPC replies.
+          setLoading(nativeEvent.loading && !ready.current);
+        }}
+        onLoadProgress={({ nativeEvent }) => { if (nativeEvent.progress === 1) setLoading(false); }}
         onLoadEnd={() => setLoading(false)}
         onError={() => { setLoading(false); setError('Cannot connect to BAL Admin. Check your internet connection and try again.'); }}
         onHttpError={event => {

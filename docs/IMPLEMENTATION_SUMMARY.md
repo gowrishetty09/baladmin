@@ -1,6 +1,6 @@
 # FCM Implementation Summary
 
-## Project: Cab Management System - Admin Mobile App
+## Project: BAL System - Admin Mobile App
 
 ## Date: January 2025
 
@@ -17,7 +17,6 @@ Firebase Cloud Messaging (FCM) has been fully implemented for push notifications
 ### Core Services
 
 1. **`src/services/fcm.ts`** (231 lines)
-
    - Firebase initialization
    - Permission handling (Android 13+, iOS)
    - FCM token generation
@@ -26,7 +25,6 @@ Firebase Cloud Messaging (FCM) has been fully implemented for push notifications
    - Notification data parsing
 
 2. **`src/services/fcmTopics.ts`** (282 lines)
-
    - Topic management utilities
    - Notification handler registry
    - Type-based notification routing
@@ -43,7 +41,6 @@ Firebase Cloud Messaging (FCM) has been fully implemented for push notifications
 ### Documentation
 
 1. **`FCM_IMPLEMENTATION.md`** (420 lines)
-
    - Complete architecture overview
    - Installation and configuration steps
    - Android setup (google-services.json)
@@ -55,7 +52,6 @@ Firebase Cloud Messaging (FCM) has been fully implemented for push notifications
    - Production deployment steps
 
 2. **`FCM_SETUP.md`** (340 lines)
-
    - Quick start checklist
    - Step-by-step setup guide
    - Android configuration
@@ -82,12 +78,10 @@ Firebase Cloud Messaging (FCM) has been fully implemented for push notifications
 ### Configuration Files
 
 1. **`package.json`**
-
    - Added: `@react-native-firebase/app@^21.1.0`
    - Added: `@react-native-firebase/messaging@^21.1.0`
 
 2. **`app.json`**
-
    - Added iOS bundle identifier
    - Added Android google-services.json reference
    - Added Firebase app plugin configuration
@@ -100,7 +94,6 @@ Firebase Cloud Messaging (FCM) has been fully implemented for push notifications
 ### Core Application Files
 
 1. **`App.tsx`** (118 lines)
-
    - Integrated FCM initialization
    - Added permission requests
    - Implemented notification handlers
@@ -108,13 +101,11 @@ Firebase Cloud Messaging (FCM) has been fully implemented for push notifications
    - Enhanced from expo-notifications to Firebase FCM
 
 2. **`src/services/api.ts`**
-
    - Added `registerFCMToken(token, role)` method
    - Enhanced token registration with role parameter
    - Support for ADMIN role registration
 
 3. **`src/hooks/NotificationsContext.tsx`** (65 lines)
-
    - Added `addNotification()` method
    - Added `markAsRead()` method
    - Enhanced state management for FCM

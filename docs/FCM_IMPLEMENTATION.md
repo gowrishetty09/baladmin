@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the complete FCM implementation for the Cab Management System Admin Mobile App using React Native Firebase.
+This document describes the complete FCM implementation for the BAL System Admin Mobile App using React Native Firebase.
 
 ## Architecture
 

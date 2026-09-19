@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -95,16 +96,20 @@ export const BookingsScreen: React.FC = () => {
   const loadBookings = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await ApiService.getBookings();
+      console.log('[BookingsScreen] Fetching bookings for date:', selectedDate);
+      const data = await ApiService.getBookings({ date: selectedDate });
+      console.log('[BookingsScreen] API returned', data.length, 'bookings',
+        data.length ? `first pickupTime: ${data[0].scheduledTime}` : '(empty)');
       const sortedData = sortByPickupTimeAsc(data);
       setBookings(sortedData);
-      setFilteredBookings(sortedData);
+      // Do NOT call setFilteredBookings here — the applyFilters useEffect handles
+      // it after every bookings change, preventing the brief flash of unfiltered data.
     } catch (error) {
-      console.error("Error loading bookings:", error);
+      console.error('[BookingsScreen] Error loading bookings:', error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     loadBookings();
@@ -203,12 +208,16 @@ export const BookingsScreen: React.FC = () => {
   const applyFilters = () => {
     let filtered = [...bookings];
 
-    // Filter by selected date
+    // Filter by selected date using device LOCAL time so timezone differences
+    // between the device and server don’t drop early-morning bookings.
     if (selectedDate) {
       filtered = filtered.filter((b) => {
         const bookingDate = new Date(b.scheduledTime || b.createdAt);
-        const dateStr = `${bookingDate.getFullYear()}-${String(bookingDate.getMonth() + 1).padStart(2, "0")}-${String(bookingDate.getDate()).padStart(2, "0")}`;
-        return dateStr === selectedDate;
+        if (isNaN(bookingDate.getTime())) return false;
+        const y = bookingDate.getFullYear();
+        const m = String(bookingDate.getMonth() + 1).padStart(2, '0');
+        const d = String(bookingDate.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}` === selectedDate;
       });
     }
 
@@ -254,6 +263,8 @@ export const BookingsScreen: React.FC = () => {
     }
 
     setFilteredBookings(sortByPickupTimeAsc(filtered));
+    console.log('[BookingsScreen] applyFilters date:', selectedDate,
+      '| raw bookings:', bookings.length, '| after filters:', filtered.length);
   };
 
   const clearFilters = () => {
@@ -509,10 +520,17 @@ export const BookingsScreen: React.FC = () => {
       </View>
 
       {viewMode === "table" ? (
+        isLoading ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color={Colors.pagegold ?? Colors.ivory} />
+            <Text style={[styles.emptyText, { marginTop: 12 }]}>Loading bookings…</Text>
+          </View>
+        ) : (
         <BookingsTableView
           bookings={filteredBookings}
           onViewDetails={handleViewDetails}
         />
+        )
       ) : (
         <FlatList
           data={filteredBookings}
@@ -534,22 +552,29 @@ export const BookingsScreen: React.FC = () => {
             />
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name="document-text-outline"
-                size={64}
-                color={Colors.ivory}
-              />
-              <Text style={styles.emptyText}>No bookings found</Text>
-              {hasActiveFilters && (
-                <TouchableOpacity
-                  style={styles.clearFiltersButton}
-                  onPress={clearFilters}
-                >
-                  <Text style={styles.clearFiltersText}>Clear Filters</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            isLoading ? (
+              <View style={styles.emptyContainer}>
+                <ActivityIndicator size="large" color={Colors.pagegold ?? Colors.ivory} />
+                <Text style={[styles.emptyText, { marginTop: 12 }]}>Loading bookings…</Text>
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Ionicons
+                  name="document-text-outline"
+                  size={64}
+                  color={Colors.ivory}
+                />
+                <Text style={styles.emptyText}>No bookings for {selectedDate}</Text>
+                {hasActiveFilters && (
+                  <TouchableOpacity
+                    style={styles.clearFiltersButton}
+                    onPress={clearFilters}
+                  >
+                    <Text style={styles.clearFiltersText}>Clear Filters</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )
           }
         />
       )}
@@ -666,6 +691,12 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  loaderContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",

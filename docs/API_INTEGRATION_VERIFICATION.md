@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-All APIs have been **successfully integrated** with the backend cab management system. The application uses **100% real backend API calls** for all production features. Mock data is **isolated only in testing utilities** and is clearly documented as such.
+All APIs have been **successfully integrated** with the backend BAL system. The application uses **100% real backend API calls** for all production features. Mock data is **isolated only in testing utilities** and is clearly documented as such.
 
 ---
 

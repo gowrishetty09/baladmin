@@ -4,7 +4,7 @@
 ╔════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                ║
 ║                 FIREBASE CLOUD MESSAGING (FCM) IMPLEMENTATION                 ║
-║                      CAB MANAGEMENT SYSTEM - ADMIN APP                        ║
+║                      BAL SYSTEM - ADMIN APP                        ║
 ║                                                                                ║
 ║                              ✅ COMPLETE & READY                              ║
 ║                                                                                ║

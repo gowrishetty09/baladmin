@@ -2,11 +2,12 @@
 
 ## ✅ Implementation Summary
 
-The admin mobile app (baladmin) has been fully integrated with the backend cab management API following the bal-customer app patterns and best practices.
+The admin mobile app (baladmin) has been fully integrated with the backend BAL API following the bal-customer app patterns and best practices.
 
 ## Files Created/Updated
 
 ### Core API & Authentication
+
 - **`src/services/api.ts`** — HTTP client with token refresh logic and all backend endpoints
 - **`src/hooks/useAuthStore.ts`** — AuthContext for managing JWT tokens and user session (SecureStore persisted)
 - **`src/hooks/useAuth.ts`** — useAuth hook wrapper for easy access to auth context
@@ -15,6 +16,7 @@ The admin mobile app (baladmin) has been fully integrated with the backend cab m
 - **`src/types/index.ts`** — Added Admin user type interface
 
 ### Configuration
+
 - **`.env`** — Environment variables with BASE_URL
 
 ## Architecture Overview
@@ -54,6 +56,7 @@ The admin mobile app (baladmin) has been fully integrated with the backend cab m
 ## Token Management Flow
 
 ### Initial Login
+
 ```
 1. User enters email/password → LoginScreen
 2. Login screen calls → useAuthContext.login(email, password)
@@ -65,6 +68,7 @@ The admin mobile app (baladmin) has been fully integrated with the backend cab m
 ```
 
 ### Token Refresh (Automatic)
+
 ```
 1. Request to API fails with 401 Unauthorized
 2. HTTP Interceptor catches 401 response
@@ -76,6 +80,7 @@ The admin mobile app (baladmin) has been fully integrated with the backend cab m
 ```
 
 ### Logout
+
 ```
 1. User calls → useAuthContext.logout()
 2. Clears SecureStore
@@ -91,8 +96,8 @@ The admin mobile app (baladmin) has been fully integrated with the backend cab m
 Update your root navigation or App.tsx:
 
 ```tsx
-import { AuthProvider } from './src/hooks/useAuthStore';
-import RootNavigator from './src/navigation/RootNavigator';
+import { AuthProvider } from "./src/hooks/useAuthStore";
+import RootNavigator from "./src/navigation/RootNavigator";
 
 export default function App() {
   return (
@@ -108,9 +113,9 @@ export default function App() {
 In your RootNavigator.tsx:
 
 ```tsx
-import { useAuthContext } from '../hooks/useAuthStore';
-import LoginScreen from '../screens/LoginScreen';
-import DashboardScreen from '../screens/HomeScreen';
+import { useAuthContext } from "../hooks/useAuthStore";
+import LoginScreen from "../screens/LoginScreen";
+import DashboardScreen from "../screens/HomeScreen";
 
 export default function RootNavigator() {
   const { isAuthenticated, isInitializing } = useAuthContext();
@@ -122,14 +127,14 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator>
       {!isAuthenticated ? (
-        <Stack.Screen 
-          name="Login" 
+        <Stack.Screen
+          name="Login"
           component={LoginScreen}
           options={{ headerShown: false }}
         />
       ) : (
-        <Stack.Screen 
-          name="Home" 
+        <Stack.Screen
+          name="Home"
           component={DashboardScreen}
           options={{ headerShown: false }}
         />
@@ -154,20 +159,20 @@ EXPO_PUBLIC_API_BASE_URL=http://localhost:3000/api
 ### Login Screen Usage
 
 ```tsx
-import useAuth from '../hooks/useAuth';
+import useAuth from "../hooks/useAuth";
 
 function MyComponent() {
   const { login, isAuthenticated, user } = useAuth();
-  
+
   const handleLogin = async () => {
     try {
-      await login('admin@example.com', 'password123');
+      await login("admin@example.com", "password123");
       // User is now authenticated
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error("Login failed:", error);
     }
   };
-  
+
   return (
     <View>
       {isAuthenticated && <Text>Welcome, {user?.name}</Text>}
@@ -180,39 +185,39 @@ function MyComponent() {
 ### Using API Service
 
 ```tsx
-import apiService from '../services/api';
+import apiService from "../services/api";
 
 async function loadDashboard() {
   try {
     const summary = await apiService.getDashboardSummary();
-    console.log('Bookings:', summary.newBookingsToday);
+    console.log("Bookings:", summary.newBookingsToday);
   } catch (error) {
-    console.error('Failed to load dashboard:', error);
+    console.error("Failed to load dashboard:", error);
   }
 }
 
 async function getBookings() {
   try {
     const bookings = await apiService.getBookings({
-      status: 'PENDING',
+      status: "PENDING",
       limit: 20,
-      offset: 0
+      offset: 0,
     });
     return bookings;
   } catch (error) {
-    console.error('Failed to fetch bookings:', error);
+    console.error("Failed to fetch bookings:", error);
   }
 }
 
 async function assignDriver() {
   try {
     const booking = await apiService.assignDriver(
-      'booking-id-123',
-      'driver-id-456'
+      "booking-id-123",
+      "driver-id-456",
     );
     return booking;
   } catch (error) {
-    console.error('Failed to assign driver:', error);
+    console.error("Failed to assign driver:", error);
   }
 }
 ```
@@ -220,19 +225,19 @@ async function assignDriver() {
 ### Fetch Current Admin on App Load
 
 ```tsx
-import apiService from '../services/api';
-import { useAuthContext } from '../hooks/useAuthStore';
+import apiService from "../services/api";
+import { useAuthContext } from "../hooks/useAuthStore";
 
 useEffect(() => {
   const fetchProfile = async () => {
     try {
       const adminUser = await apiService.fetchCurrentAdmin();
-      console.log('Current admin:', adminUser);
+      console.log("Current admin:", adminUser);
     } catch (error) {
-      console.error('Failed to fetch profile:', error);
+      console.error("Failed to fetch profile:", error);
     }
   };
-  
+
   if (isAuthenticated) {
     fetchProfile();
   }
@@ -244,19 +249,23 @@ useEffect(() => {
 All endpoints require Bearer token authentication (except /auth/login).
 
 ### Authentication
+
 - `POST /auth/login` → Login admin
 - `POST /auth/refresh` → Refresh access token
 - `GET /auth/me` → Get current admin profile
 
 ### Dashboard
+
 - `GET /dashboard/bookings-summary?from=ISO&to=ISO` → Dashboard summary
 
 ### Bookings
+
 - `GET /bookings?status=&driverId=&limit=&offset=` → List bookings
 - `GET /bookings/:id` → Get booking detail
 - `POST /bookings/:id/assign` → Assign driver to booking
 
 ### Notifications
+
 - `GET /notifications?limit=&offset=` → List notifications
 - `PATCH /notifications/:id/read` → Mark as read
 - `GET /notifications/unread-count` → Get unread count
@@ -264,6 +273,7 @@ All endpoints require Bearer token authentication (except /auth/login).
 - `DELETE /notifications/unregister-device` → Unregister FCM token
 
 ### Dispatch
+
 - `GET /dispatch/available-drivers` → Get available drivers
 
 ## Error Handling
@@ -277,13 +287,13 @@ The app automatically handles common errors:
 Custom error handling in components:
 
 ```tsx
-import { getErrorMessage } from '../utils';
+import { getErrorMessage } from "../utils";
 
 try {
   await apiService.getBookings();
 } catch (error) {
-  const message = getErrorMessage(error, 'Failed to load bookings');
-  Alert.alert('Error', message);
+  const message = getErrorMessage(error, "Failed to load bookings");
+  Alert.alert("Error", message);
 }
 ```
 
@@ -292,7 +302,7 @@ try {
 When you receive FCM tokens, register them:
 
 ```tsx
-import apiService from '../services/api';
+import apiService from "../services/api";
 
 // On app startup or token refresh
 const fcmToken = await getFCMToken(); // from Firebase
@@ -322,6 +332,7 @@ const handleLogout = async () => {
 ## Testing
 
 ### Test Login
+
 ```
 Email: admin@example.com
 Password: testpassword123
@@ -330,6 +341,7 @@ Password: testpassword123
 ```
 
 ### Test Navigation
+
 1. App starts → shows LoginScreen if not authenticated
 2. Enter credentials → redirects to Dashboard/HomeScreen
 3. Close app → reopens to Dashboard (session restored)
@@ -338,15 +350,19 @@ Password: testpassword123
 ## Troubleshooting
 
 ### Issue: 401 Unauthorized errors
+
 **Solution:** Check if tokens exist, refresh manually or logout and login again
 
 ### Issue: Network errors
+
 **Solution:** Verify BASE_URL in .env points to correct backend server
 
 ### Issue: Login fails with invalid credentials
+
 **Solution:** Ensure admin account exists in backend with correct email/password
 
 ### Issue: Session not persisting
+
 **Solution:** Ensure expo-secure-store is installed and SecureStore.getItemAsync works on device
 
 ## Next Steps
@@ -364,9 +380,9 @@ Password: testpassword123
 ## Reference Structure (bal-customer app)
 
 The implementation follows the proven pattern from bal-customer app:
+
 - AuthContext for state management (not Redux)
 - SecureStore for token persistence
 - Axios HTTP client with interceptors
 - Error handling utilities
 - Re-usable auth hooks
-

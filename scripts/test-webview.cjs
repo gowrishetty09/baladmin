@@ -25,3 +25,23 @@ assert.equal(isExternalUrl('tel:+60123456789'), true);
 assert.equal(isExternalUrl('intent://arbitrary'), false);
 assert.equal(isExternalUrl('javascript:alert(1)'), false);
 console.log('PASS: trusted admin navigation, external scheme restrictions, notification destinations, safe export filenames');
+
+const { isTrustedBridgeSource } = exportsObject;
+assert.equal(isTrustedBridgeSource('https://bestaerolimo.com', 'https://bestaerolimo.com/admin/login', config), true);
+assert.equal(isTrustedBridgeSource('https://bestaerolimo.com/admin/login', 'https://bestaerolimo.com/admin/login', config), true);
+assert.equal(isTrustedBridgeSource('https://evil.example', 'https://bestaerolimo.com/admin/login', config), false);
+assert.equal(isTrustedBridgeSource('https://bestaerolimo.com', 'https://bestaerolimo.com/uploads/untrusted.html', config), false);
+assert.equal(isTrustedBridgeSource('https://bestaerolimo.com/uploads/untrusted.html', 'https://bestaerolimo.com/admin/login', config), false);
+assert.equal(isTrustedBridgeSource('http://bestaerolimo.com', 'https://bestaerolimo.com/admin/login', config), false);
+console.log('PASS: Android origin-only bridge messages, full-URL messages, cross-origin and non-admin rejection');
+
+const { nativeEventScript } = exportsObject;
+for (const [origin, pathname, expected] of [['https://bestaerolimo.com','/admin/login',1], ['https://bestaerolimo.com','/admin',1], ['https://evil.example','/admin/login',0], ['https://bestaerolimo.com','/uploads/file.html',0]]) {
+  const received = [];
+  vm.runInNewContext(nativeEventScript(config, 'bal:native-response', {version:1,id:'rpc-test',result:'safe-test-value'}), {
+    location: {origin,pathname}, window: {dispatchEvent: event => received.push(event)}, CustomEvent: class {constructor(type,options){this.type=type;this.detail=options.detail;}},
+  });
+  assert.equal(received.length, expected);
+  if(expected) assert.equal(received[0].detail.result, 'safe-test-value');
+}
+console.log('PASS: injected response script parses, delivers RPC results, and blocks other documents');

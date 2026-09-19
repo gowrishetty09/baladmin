@@ -374,10 +374,11 @@ class ApiService {
   }
 
   // All-time totals (revenue + completed rides) sourced from /analytics with a wide range.
-  async getDashboardTotals(): Promise<DashboardTotals> {
-    const from = '2000-01-01';
-    const to = new Date().toISOString().slice(0, 10);
-    const { data } = await this.api.get('/analytics', { params: { from, to } });
+  async getDashboardTotals(from?: string, to?: string): Promise<DashboardTotals> {
+    // If no range is provided, default to an all-time wide range.
+    const fromDate = from ?? '2000-01-01';
+    const toDate = to ?? new Date().toISOString().slice(0, 10);
+    const { data } = await this.api.get('/analytics', { params: { from: fromDate, to: toDate } });
     const kpi = data?.kpiSummary ?? {};
     return {
       totalRevenue: Number(kpi.totalRevenue ?? 0),
@@ -385,17 +386,25 @@ class ApiService {
     };
   }
 
-  // Overview stats for the last N months: new bookings, ongoing, completed, cancelled.
-  async getDashboardOverview(months: OverviewRangeMonths): Promise<DashboardOverview> {
+  // Overview stats. Pass explicit from/to, or fall back to last `months` months.
+  async getDashboardOverview(months: OverviewRangeMonths, explicitFrom?: string, explicitTo?: string): Promise<DashboardOverview> {
     const now = new Date();
     const toDate = new Date(now);
     const fromDate = new Date(now);
     fromDate.setMonth(fromDate.getMonth() - months);
 
-    const from = fromDate.toISOString().slice(0, 10);
-    const to = toDate.toISOString().slice(0, 10);
+    const fromStr = explicitFrom ?? fromDate.toISOString().slice(0, 10);
+    const toStr = explicitTo ?? toDate.toISOString().slice(0, 10);
 
-    const { data } = await this.api.get('/analytics', { params: { from, to } });
+    // Convert YYYY-MM-DD to local-timezone ISO strings (same approach as web admin's
+    // dayjs().startOf('day').toISOString()). This ensures the backend's
+    // resolveRangeBoundaries() lands on the correct local calendar day regardless
+    // of the server's timezone offset.
+    // e.g. in UTC+8:  '2026-06-08T00:00:00' → '2026-06-07T16:00:00.000Z'
+    const fromISO = new Date(fromStr + 'T00:00:00').toISOString();
+    const toISO   = new Date(toStr   + 'T23:59:59.999').toISOString();
+
+    const { data } = await this.api.get('/analytics', { params: { from: fromISO, to: toISO } });
     const kpi = data?.kpiSummary ?? {};
     const byStatus: Array<{ status: string; count: number }> = Array.isArray(data?.bookingsByStatus)
       ? data.bookingsByStatus
@@ -414,6 +423,7 @@ class ApiService {
       ongoingRides,
       completedRides: Number(kpi.completedBookings ?? 0),
       cancelledRides: Number(kpi.cancelledBookings ?? 0),
+      totalRevenue: Number(kpi.totalRevenue ?? 0),
     };
   }
 
@@ -422,14 +432,27 @@ class ApiService {
     hotel?: string;
     driver?: string;
     status?: BookingStatus;
+    date?: string;   // YYYY-MM-DD — maps to startDate/endDate on the backend
     limit?: number;
     offset?: number;
   }): Promise<Booking[]> {
     try {
       const params: any = {
-        limit: filters?.limit || 50,
+        limit: filters?.limit || 100,
         offset: filters?.offset || 0,
       };
+
+      if (filters?.date) {
+        // Compute local midnight as a UTC ISO string so the server receives the
+        // correct boundary regardless of its own timezone.  For example, on a
+        // Malaysia (UTC+8) device "2026-06-08T00:00:00" becomes
+        // "2026-06-07T16:00:00.000Z", ensuring early-morning pickups (e.g. 6 AM
+        // airport runs) are not excluded by a UTC-midnight cutoff.
+        // We only send startDate — client-side filtering handles the upper bound
+        // so we avoid the server’s setHours() timezone ambiguity for endDate.
+        const localMidnight = new Date(filters.date + 'T00:00:00');
+        params.startDate = localMidnight.toISOString();
+      }
 
       // Backend expects BookingStatus values like REQUESTED/ASSIGNED/EN_ROUTE/etc.
       if (filters?.status) {

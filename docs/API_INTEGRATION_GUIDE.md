@@ -2,7 +2,7 @@
 
 ## Overview
 
-The admin mobile app (`baladmin`) has been successfully integrated with the backend cab management API. All endpoints now call the real backend instead of using mock data.
+The admin mobile app (`baladmin`) has been successfully integrated with the backend BAL API. All endpoints now call the real backend instead of using mock data.
 
 ## Configuration
 
@@ -49,12 +49,10 @@ Authorization: Bearer <accessToken>
 ### Bookings
 
 - **GET /bookings** → `getBookings(filters)`
-
   - Filters: status, driverId, hotelId, limit, offset
   - Returns paginated booking list
 
 - **GET /bookings/:id** → `getBookingById(bookingId)`
-
   - Fetch single booking details
 
 - **POST /bookings/:id/assign** → `assignDriver(bookingId, driverId, vehicleId?)`
@@ -68,19 +66,15 @@ Authorization: Bearer <accessToken>
 ### Notifications & FCM
 
 - **GET /notifications** → `getNotifications(limit?, offset?)`
-
   - Fetch paginated notifications with defaults (limit: 50, offset: 0)
 
 - **PATCH /notifications/:id/read** → `markNotificationAsRead(notificationId)`
-
   - Mark single notification as read
 
 - **GET /notifications/unread-count** → `getUnreadNotificationCount()`
-
   - Get unread notification badge count
 
 - **POST /notifications/register-device** → `registerFCMToken(token)`
-
   - Register FCM device token (automatically detects ANDROID/IOS platform)
 
 - **DELETE /notifications/unregister-device** → `unregisterFCMToken(token)`
@@ -101,7 +95,7 @@ const login = async (email: string, password: string) => {
       .login(
         response.data.accessToken,
         response.data.refreshToken,
-        response.data.user
+        response.data.user,
       );
   } catch (error) {
     console.error("Login failed", error);

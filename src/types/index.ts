@@ -173,6 +173,7 @@ export interface DashboardOverview {
   ongoingRides: number;
   completedRides: number;
   cancelledRides: number;
+  totalRevenue: number;
 }
 
 export interface DashboardTotals {

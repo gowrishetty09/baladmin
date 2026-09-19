@@ -11,6 +11,8 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
@@ -24,8 +26,6 @@ import { ActivityItem } from '../components/ActivityItem';
 import {
   DashboardSummary,
   DashboardOverview,
-  DashboardTotals,
-  OverviewRangeMonths,
 } from '../types';
 import { Colors } from '../constants/colors';
 import ApiService from '../services/api';
@@ -34,14 +34,6 @@ import { useNotificationsContext } from '../hooks/NotificationsContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
-
-const OVERVIEW_RANGE_OPTIONS: Array<{ value: OverviewRangeMonths; label: string }> = [
-  { value: 1, label: 'Last 1 Month' },
-  { value: 2, label: 'Last 2 Months' },
-  { value: 3, label: 'Last 3 Months' },
-  { value: 6, label: 'Last 6 Months' },
-  { value: 12, label: 'Last 1 Year' },
-];
 
 type HomeNav = CompositeNavigationProp<
   BottomTabNavigationProp<BottomTabParamList, 'Home'>,
@@ -54,54 +46,37 @@ export const HomeScreen: React.FC = () => {
   const { unreadCount } = useNotificationsContext();
   const insets = useSafeAreaInsets();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [totals, setTotals] = useState<DashboardTotals | null>(null);
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
-  const [overviewRange, setOverviewRange] = useState<OverviewRangeMonths>(1);
-  const [isOverviewLoading, setIsOverviewLoading] = useState(false);
   const [isRangePickerVisible, setIsRangePickerVisible] = useState(false);
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [customRangeLabel, setCustomRangeLabel] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  const overviewRangeLabel = useMemo(
-    () => OVERVIEW_RANGE_OPTIONS.find((opt) => opt.value === overviewRange)?.label ?? 'Last 1 Month',
-    [overviewRange]
-  );
 
   useEffect(() => {
     loadDashboardData();
   }, []);
 
-  useEffect(() => {
-    loadOverview(overviewRange);
-  }, [overviewRange]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (opts?: { from?: string; to?: string }) => {
     try {
       setIsLoading(true);
-      const [summaryData, totalsData, overviewData] = await Promise.all([
-        ApiService.getDashboardSummary(),
-        ApiService.getDashboardTotals(),
-        ApiService.getDashboardOverview(overviewRange),
+
+      // Use explicit opts when provided (custom range), otherwise default to current month
+      const now = new Date();
+      const from = opts?.from ?? new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+      const to = opts?.to ?? now.toISOString().slice(0, 10);
+
+      const [summaryData, overviewData] = await Promise.all([
+        ApiService.getDashboardSummary(from, to),
+        ApiService.getDashboardOverview(1, from, to),
       ]);
       setSummary(summaryData);
-      setTotals(totalsData);
       setOverview(overviewData);
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const loadOverview = async (months: OverviewRangeMonths) => {
-    try {
-      setIsOverviewLoading(true);
-      const data = await ApiService.getDashboardOverview(months);
-      setOverview(data);
-    } catch (error) {
-      console.error('Error loading overview:', error);
-    } finally {
-      setIsOverviewLoading(false);
     }
   };
 
@@ -180,17 +155,27 @@ export const HomeScreen: React.FC = () => {
               <Ionicons name="wallet" size={20} color={Colors.navy} />
             </View>
             <Text style={styles.revenueLabel}>Total Revenue</Text>
+            <TouchableOpacity
+              style={styles.revenueCalendarBtn}
+              onPress={() => setIsRangePickerVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="calendar-outline" size={20} color={Colors.navy} />
+            </TouchableOpacity>
           </View>
           <Text style={styles.revenueValue}>
-            RM {formatCurrency(totals?.totalRevenue ?? 0)}
+            RM {formatCurrency(overview?.totalRevenue ?? 0)}
           </Text>
           <View style={styles.revenueFooter}>
             <View style={styles.revenueStat}>
               <Ionicons name="car" size={14} color={Colors.navy + '99'} />
               <Text style={styles.revenueStatText}>
-                {totals?.completedRides ?? 0} rides completed
+                {overview?.newBookings ?? 0} bookings
               </Text>
             </View>
+            {customRangeLabel && (
+              <Text style={styles.revenueRangeText}>{customRangeLabel}</Text>
+            )}
           </View>
         </View>
       </LinearGradient>
@@ -253,24 +238,16 @@ export const HomeScreen: React.FC = () => {
               Overview
             </Text>
             <TouchableOpacity
-              style={[
-                styles.rangeSelector,
-                { backgroundColor: isDark ? '#2A2A2A' : Colors.white },
-              ]}
+              style={styles.overviewCalendarBtn}
               onPress={() => setIsRangePickerVisible(true)}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
             >
-              {isOverviewLoading ? (
-                <ActivityIndicator size="small" color={Colors.gold} style={{ marginRight: 6 }} />
+              <Ionicons name="calendar-outline" size={18} color={isDark ? Colors.ivory : Colors.navy} />
+              {customRangeLabel ? (
+                <Text style={[styles.overviewRangeLabel, { color: isDark ? Colors.gold : Colors.navy }]}>
+                  {customRangeLabel}
+                </Text>
               ) : null}
-              <Text style={[styles.rangeSelectorText, { color: isDark ? Colors.ivory : Colors.navy }]}>
-                {overviewRangeLabel}
-              </Text>
-              <Ionicons
-                name="chevron-down"
-                size={16}
-                color={isDark ? Colors.ivory : Colors.navy}
-              />
             </TouchableOpacity>
           </View>
           <View style={styles.statsRow}>
@@ -381,40 +358,69 @@ export const HomeScreen: React.FC = () => {
             ]}
             onPress={(e) => e.stopPropagation()}
           >
-            <Text style={[styles.rangeMenuTitle, { color: isDark ? Colors.ivory : Colors.navy }]}>
-              Select range
-            </Text>
-            {OVERVIEW_RANGE_OPTIONS.map((opt) => {
-              const selected = opt.value === overviewRange;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[
-                    styles.rangeMenuItem,
-                    selected && {
-                      backgroundColor: (isDark ? Colors.gold : Colors.gold) + '20',
-                    },
-                  ]}
-                  onPress={() => {
-                    setOverviewRange(opt.value);
-                    setIsRangePickerVisible(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.rangeMenuItemText,
-                      { color: isDark ? Colors.ivory : Colors.navy },
-                      selected && { color: Colors.gold, fontWeight: '700' },
-                    ]}
-                  >
-                    {opt.label}
-                  </Text>
-                  {selected ? (
-                    <Ionicons name="checkmark" size={18} color={Colors.gold} />
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
+            <Text style={[styles.rangeMenuTitle, { color: isDark ? Colors.ivory : Colors.navy }]}>Select date range</Text>
+
+            {/* FROM picker */}
+            <View style={styles.datePickerRow}>
+              <View style={styles.datePickerLabelRow}>
+                <Ionicons name="calendar-outline" size={14} color={Colors.gold} />
+                <Text style={[styles.datePickerLabel, { color: isDark ? Colors.ivory + 'AA' : Colors.navy + 'AA' }]}>From</Text>
+                {customFrom ? <Text style={[styles.datePickerValue, { color: isDark ? Colors.ivory : Colors.navy }]}>{customFrom}</Text> : null}
+              </View>
+              <DateTimePicker
+                value={customFrom ? new Date(customFrom) : new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                maximumDate={new Date()}
+                onChange={(_e, selected) => {
+                  if (selected) setCustomFrom(selected.toISOString().slice(0, 10));
+                }}
+              />
+            </View>
+
+            {/* TO picker */}
+            <View style={styles.datePickerRow}>
+              <View style={styles.datePickerLabelRow}>
+                <Ionicons name="calendar-outline" size={14} color={Colors.gold} />
+                <Text style={[styles.datePickerLabel, { color: isDark ? Colors.ivory + 'AA' : Colors.navy + 'AA' }]}>To</Text>
+                {customTo ? <Text style={[styles.datePickerValue, { color: isDark ? Colors.ivory : Colors.navy }]}>{customTo}</Text> : null}
+              </View>
+              <DateTimePicker
+                value={customTo ? new Date(customTo) : new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                maximumDate={new Date()}
+                onChange={(_e, selected) => {
+                  if (selected) setCustomTo(selected.toISOString().slice(0, 10));
+                }}
+              />
+            </View>
+
+            <View style={styles.datePickerActions}>
+              <TouchableOpacity
+                onPress={() => {
+                  setCustomFrom('');
+                  setCustomTo('');
+                  setCustomRangeLabel(null);
+                  setIsRangePickerVisible(false);
+                  loadDashboardData();
+                }}
+                style={styles.datePickerCancelBtn}
+              >
+                <Text style={{ color: isDark ? Colors.ivory : Colors.navy, fontWeight: '600' }}>Reset</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  if (!customFrom || !customTo || new Date(customFrom) > new Date(customTo)) return;
+                  setCustomRangeLabel(`${customFrom} → ${customTo}`);
+                  setIsRangePickerVisible(false);
+                  loadDashboardData({ from: customFrom, to: customTo });
+                }}
+                style={[styles.datePickerApplyBtn, (!customFrom || !customTo) && { opacity: 0.4 }]}
+              >
+                <Text style={{ color: Colors.white, fontWeight: '700' }}>Apply</Text>
+              </TouchableOpacity>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -508,6 +514,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.navy,
     fontWeight: '600',
+    flex: 1,
+  },
+  revenueCalendarBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: Colors.white + '40',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  revenueRangeText: {
+    fontSize: 11,
+    color: Colors.navy + 'BB',
+    fontWeight: '500',
+    marginTop: 4,
   },
   revenueValue: {
     fontSize: 38,
@@ -590,22 +611,60 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  rangeSelector: {
+  overviewCalendarBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
     gap: 6,
-    shadowColor: Colors.navy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.gold + '44',
   },
-  rangeSelectorText: {
-    fontSize: 13,
+  overviewRangeLabel: {
+    fontSize: 11,
     fontWeight: '600',
+    maxWidth: 120,
+  },
+  datePickerRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  datePickerLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  datePickerLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  datePickerValue: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  datePickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    padding: 16,
+  },
+  datePickerCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  datePickerApplyBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: Colors.gold,
+    borderRadius: 10,
   },
   modalBackdrop: {
     flex: 1,
