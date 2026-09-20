@@ -49,7 +49,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ...config,
         name: 'Bal-Adminapp',
         slug: 'bal-admin',
-        version: '1.1.0',
+        version: '1.1.1',
         orientation: 'default',
         icon: './assets/icon.png',
         userInterfaceStyle: 'light',
