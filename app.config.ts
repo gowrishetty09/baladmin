@@ -104,6 +104,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
                 },
             ]);
             next = upsertPlugin(next, 'expo-secure-store');
+            next = upsertPlugin(next, [
+                'expo-build-properties',
+                {
+                    android: {
+                        extraProguardRules:
+                            '-keep class * extends androidx.room.RoomDatabase { <init>(); }\n' +
+                            '-keep class * extends androidx.work.InputMerger { <init>(); }',
+                    },
+                },
+            ]);
 
             const hasMaps = next.some((p) => normalizePluginName(p) === 'react-native-maps');
             if (Object.keys(mapsPluginConfig).length) {
